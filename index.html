@@ -1,0 +1,2733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1e1b4b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="PrinsiVault">
+    <title>PrinsiVault — Personal Data & Record Manager</title>
+    <link id="app-favicon" rel="icon" type="image/png" href="">
+    <link id="app-apple-icon" rel="apple-touch-icon" href="">
+    <link id="app-manifest" rel="manifest" href="">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'Inter', 'Helvetica', 'Arial', 'sans-serif'],
+                    },
+                    colors: {
+                        indigo: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            200: '#c7d2fe',
+                            300: '#a5b4fc',
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            800: '#3730a3',
+                            900: '#312e81',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Firebase Modular SDK (v11.6.1) for Multi-Device Cloud Sync -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        window.FB = {
+            initializeApp,
+            getAuth,
+            signInAnonymously,
+            signInWithCustomToken,
+            getFirestore,
+            doc,
+            setDoc,
+            getDoc,
+            onSnapshot,
+            collection
+        };
+        window.dispatchEvent(new Event('firebase-sdk-ready'));
+    </script>
+    <style>
+        /* Clean, accessible focus rings and smooth transitions */
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+        .fade-in {
+            animation: fadeIn 0.18s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Print Styles for Prinsi Chhatrola's Clean A4 Resume PDF */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #resume-print-sheet, #resume-print-sheet * {
+                visibility: visible;
+            }
+            #resume-print-sheet {
+                position: fixed;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 24px 32px;
+                background: #ffffff !important;
+                color: #0f172a !important;
+                box-shadow: none !important;
+                border: none !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans antialiased text-slate-900 bg-slate-50 selection:bg-indigo-600 selection:text-white">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-[100] flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Custom Confirmation Modal (No browser alert/confirm) -->
+    <div id="confirm-modal" class="fixed inset-0 z-[90] hidden items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl fade-in">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+                </div>
+                <h3 id="confirm-title" class="text-lg font-bold text-slate-900">Confirm Action</h3>
+            </div>
+            <p id="confirm-message" class="text-sm text-slate-600 mb-6 leading-relaxed">Are you sure you want to proceed?</p>
+            <div class="flex justify-end gap-3">
+                <button id="confirm-cancel-btn" class="px-4 py-2.5 text-sm font-semibold rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 transition">Cancel</button>
+                <button id="confirm-ok-btn" class="px-5 py-2.5 text-sm font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOP RELIABILITY & PERSONAL HEADER BAR -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-2xs">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <!-- Left: Personalized Brand & User Identity -->
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <!-- Custom PrinsiVault Shield & Vault SVG Logo -->
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-1 flex items-center justify-center shadow-md shadow-indigo-500/20 border border-cyan-400/30 shrink-0">
+                        <svg viewBox="0 0 120 120" class="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="PrinsiVault Logo">
+                            <defs>
+                                <linearGradient id="pvShieldGrad" x1="15" y1="15" x2="105" y2="105" gradientUnits="userSpaceOnUse">
+                                    <stop offset="0%" stop-color="#22D3EE"/>
+                                    <stop offset="50%" stop-color="#6366F1"/>
+                                    <stop offset="100%" stop-color="#C084FC"/>
+                                </linearGradient>
+                                <linearGradient id="pvDocCyan" x1="0" y1="0" x2="1" y2="1">
+                                    <stop offset="0%" stop-color="#67E8F9"/>
+                                    <stop offset="100%" stop-color="#06B6D4"/>
+                                </linearGradient>
+                                <linearGradient id="pvDocPurple" x1="0" y1="0" x2="1" y2="1">
+                                    <stop offset="0%" stop-color="#C084FC"/>
+                                    <stop offset="100%" stop-color="#7C3AED"/>
+                                </linearGradient>
+                            </defs>
+                            <!-- Emerging Documents at Top -->
+                            <g transform="rotate(-14 45 32)">
+                                <rect x="33" y="14" width="22" height="28" rx="3" fill="url(#pvDocCyan)" opacity="0.9"/>
+                                <line x1="37" y1="20" x2="50" y2="20" stroke="#0F172A" stroke-width="2" stroke-linecap="round"/>
+                                <line x1="37" y1="25" x2="47" y2="25" stroke="#0F172A" stroke-width="2" stroke-linecap="round"/>
+                            </g>
+                            <g transform="rotate(14 75 32)">
+                                <rect x="64" y="15" width="22" height="28" rx="3" fill="url(#pvDocPurple)" opacity="0.95"/>
+                                <circle cx="71" cy="22" r="2.2" fill="#FFFFFF"/>
+                                <path d="M68 30 L73 25 L77 29 L80 26 L83 30 Z" fill="#FFFFFF"/>
+                            </g>
+                            <!-- Outer Shield -->
+                            <path d="M60 22 L96 34 V63 C96 86 80 102 60 110 C40 102 24 86 24 63 V34 L60 22 Z" fill="#0F172A" stroke="url(#pvShieldGrad)" stroke-width="4.5" stroke-linejoin="round"/>
+                            <!-- Circular Vault Door -->
+                            <circle cx="60" cy="65" r="27" fill="#1E1B4B" stroke="url(#pvShieldGrad)" stroke-width="3.5"/>
+                            <circle cx="60" cy="65" r="21" stroke="#38BDF8" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.7"/>
+                            <!-- Vault Hinges & Spokes -->
+                            <rect x="31" y="54" width="5" height="7" rx="1.5" fill="#22D3EE"/>
+                            <rect x="31" y="69" width="5" height="7" rx="1.5" fill="#22D3EE"/>
+                            <line x1="74" y1="53" x2="81" y2="48" stroke="#C084FC" stroke-width="2.5" stroke-linecap="round"/>
+                            <line x1="77" y1="65" x2="85" y2="65" stroke="#C084FC" stroke-width="2.5" stroke-linecap="round"/>
+                            <line x1="74" y1="77" x2="81" y2="82" stroke="#C084FC" stroke-width="2.5" stroke-linecap="round"/>
+                            <!-- Center PC Monogram Ring -->
+                            <circle cx="60" cy="65" r="14" fill="#0F172A" stroke="url(#pvShieldGrad)" stroke-width="2.5"/>
+                            <text x="60" y="69.5" text-anchor="middle" fill="#FFFFFF" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="13" letter-spacing="-0.5">PC</text>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h1 class="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900">
+                                Prinsi<span class="bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 bg-clip-text text-transparent">Vault</span>
+                            </h1>
+                            <span class="hidden sm:inline-block px-2 py-0.5 text-[11px] font-semibold rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">Prinsi Chhatrola</span>
+                        </div>
+                        <p class="text-[11px] font-bold tracking-wider uppercase text-slate-500">All-in-One Data Record</p>
+                    </div>
+                </div>
+
+                <!-- Mobile Status Pills -->
+                <div class="lg:hidden flex items-center gap-1.5">
+                    <button onclick="openSyncModal()" class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-cyan-50 border border-cyan-200 text-cyan-800 text-[11px] font-bold">
+                        <span id="cloud-dot-mobile" class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <span class="cloud-status-short">Sync</span>
+                    </button>
+                    <button onclick="toggleVaultLock()" id="mobile-lock-pill" class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-300 text-slate-700 text-[11px] font-bold">
+                        <span class="lock-status-label">Unlocked</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right: Multi-Device Sync, Vault Lock, Protected Badge + Backup -->
+            <div class="flex flex-wrap items-center gap-2">
+                <!-- Multi-Device Sync Status Button (Laptop & Phone) -->
+                <button onclick="openSyncModal()" id="cloud-sync-btn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-50 hover:bg-cyan-100 border border-cyan-200 text-cyan-900 text-xs font-bold transition" title="Sync across Laptop & Phone">
+                    <span id="cloud-dot-desktop" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span id="cloud-status-text">Vault Sync: Ready</span>
+                </button>
+
+                <!-- Vault Lock / Permission Guard Button -->
+                <button onclick="toggleVaultLock()" id="vault-lock-btn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 text-xs font-bold transition" title="Lock editing with PIN">
+                    <svg id="vault-lock-icon" class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 119 0v3.75M3.75 21.75h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
+                    <span class="lock-status-label">Unlocked (PIN)</span>
+                </button>
+
+                <!-- Permanent Record Protection Badge -->
+                <div class="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold" title="Records are permanently protected and can never be deleted">
+                    <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
+                    <span class="save-status-text">No-Delete Protected</span>
+                </div>
+
+                <!-- 1-Click Download Backup (.json) -->
+                <button onclick="downloadBackupJSON()" class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition">
+                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                    <span>Backup</span>
+                </button>
+
+                <!-- 1-Click Restore Backup (.json) -->
+                <label class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 text-xs font-bold cursor-pointer transition">
+                    <svg class="w-3.5 h-3.5 shrink-0 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
+                    <span>Restore</span>
+                    <input type="file" id="restore-file-input" accept=".json" onchange="handleRestoreBackup(event)" class="hidden">
+                </label>
+            </div>
+        </div>
+
+        <!-- Read-Only Lock Banner (Visible when Vault is Locked) -->
+        <div id="locked-banner" class="hidden bg-amber-50 border-t border-amber-200 px-4 py-2 text-center text-xs font-bold text-amber-900">
+            Vault is currently in View-Only Mode (No edits or changes allowed). Click <button onclick="toggleVaultLock()" class="underline text-indigo-700 ml-1">Unlock with PIN</button> to add or edit records.
+        </div>
+
+        <!-- SIMPLE 6-TAB NAVIGATION BAR -->
+        <nav class="bg-slate-50/90 border-t border-slate-200/80">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 flex items-center gap-1.5 overflow-x-auto py-2 no-scrollbar">
+                <button onclick="switchTab('all')" data-tab="all" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg>
+                    <span>All Records</span>
+                </button>
+
+                <button onclick="switchTab('resume')" data-tab="resume" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+                    <span>Resume</span>
+                </button>
+
+                <button onclick="switchTab('notes')" data-tab="notes" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
+                    <span>Notes</span>
+                    <span id="count-notes" class="px-2 py-0.5 text-xs rounded-full bg-slate-200 text-slate-700">0</span>
+                </button>
+
+                <button onclick="switchTab('designs')" data-tab="designs" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>
+                    <span>Designs</span>
+                    <span id="count-designs" class="px-2 py-0.5 text-xs rounded-full bg-slate-200 text-slate-700">0</span>
+                </button>
+
+                <button onclick="switchTab('works')" data-tab="works" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z"/></svg>
+                    <span>Works & Files</span>
+                    <span id="count-works" class="px-2 py-0.5 text-xs rounded-full bg-slate-200 text-slate-700">0</span>
+                </button>
+
+                <button onclick="switchTab('archived')" data-tab="archived" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/></svg>
+                    <span>Safe Archive</span>
+                    <span id="count-archived" class="px-2 py-0.5 text-xs rounded-full bg-slate-200 text-slate-700">0</span>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- MAIN CONTENT CONTAINER -->
+    <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+
+        <!-- ==================== TAB 0: ALL RECORDS (HOME OVERVIEW) ==================== -->
+        <section id="section-all" class="space-y-6 fade-in">
+            <!-- Personalized Welcome & Editable Profile Card -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-2xs">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div class="flex items-start sm:items-center gap-4">
+                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 border border-cyan-400/40 p-1.5 flex items-center justify-center shadow-md shadow-indigo-500/15 shrink-0">
+                            <svg viewBox="0 0 120 120" class="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                    <linearGradient id="pvCardShield" x1="15" y1="15" x2="105" y2="105" gradientUnits="userSpaceOnUse">
+                                        <stop offset="0%" stop-color="#22D3EE"/>
+                                        <stop offset="50%" stop-color="#6366F1"/>
+                                        <stop offset="100%" stop-color="#C084FC"/>
+                                    </linearGradient>
+                                </defs>
+                                <g transform="rotate(-14 45 32)">
+                                    <rect x="33" y="14" width="22" height="28" rx="3" fill="#22D3EE"/>
+                                </g>
+                                <g transform="rotate(14 75 32)">
+                                    <rect x="64" y="15" width="22" height="28" rx="3" fill="#C084FC"/>
+                                </g>
+                                <path d="M60 22 L96 34 V63 C96 86 80 102 60 110 C40 102 24 86 24 63 V34 L60 22 Z" fill="#0F172A" stroke="url(#pvCardShield)" stroke-width="4.5" stroke-linejoin="round"/>
+                                <circle cx="60" cy="65" r="27" fill="#1E1B4B" stroke="url(#pvCardShield)" stroke-width="3.5"/>
+                                <circle cx="60" cy="65" r="14" fill="#0F172A" stroke="url(#pvCardShield)" stroke-width="2.5"/>
+                                <text x="60" y="69.5" text-anchor="middle" fill="#FFFFFF" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="13">PC</text>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900">Welcome back, <span id="display-profile-name">Prinsi Chhatrola</span>!</h2>
+                            <p id="display-profile-bio" class="text-sm text-slate-600 mt-0.5">Creative Thinker, Learner & Builder — Keeping all my resumes, notes, designs, and projects safe in one place.</p>
+                            <p id="display-profile-contact" class="text-xs font-medium text-indigo-600 mt-1">prinsi.chhatrola@email.com • Gujarat, India</p>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 self-start sm:self-center shrink-0">
+                        <button onclick="openSyncModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs sm:text-sm font-semibold transition">
+                            <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3"/></svg>
+                            <span>Phone & Laptop Sync</span>
+                        </button>
+                        <button onclick="downloadAppIconPNG()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-cyan-200 bg-cyan-50/70 hover:bg-cyan-100/80 text-cyan-900 text-xs sm:text-sm font-semibold transition">
+                            <svg class="w-4 h-4 text-cyan-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            <span>App Icon (PNG)</span>
+                        </button>
+                        <button onclick="requireUnlocked(() => openProfileModal())" class="edit-protected-btn inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs sm:text-sm font-semibold transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"/></svg>
+                            <span>Edit Profile</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Upload Bar for Device PDFs, Resumes, Photos & Work Documents -->
+            <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-5 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider rounded-md bg-cyan-400/20 text-cyan-300 border border-cyan-400/30">Device Upload & Multi-Access</span>
+                        <span class="px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider rounded-md bg-emerald-400/20 text-emerald-300 border border-emerald-400/30">No-Delete Protected</span>
+                    </div>
+                    <h3 class="text-base sm:text-lg font-extrabold mt-1.5">Upload PDF Resume, Photos & Work Documents from Phone or Laptop</h3>
+                    <p class="text-xs text-slate-300 mt-0.5">All uploaded files are saved permanently (never deleted) and sync automatically across your connected devices.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 shrink-0">
+                    <button onclick="requireUnlocked(() => { switchTab('resume'); document.getElementById('resume-pdf-upload').click(); })" class="px-3.5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-extrabold transition shadow-xs">
+                        + Upload PDF Resume
+                    </button>
+                    <button onclick="requireUnlocked(() => { switchTab('designs'); openDesignModal(); })" class="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold transition">
+                        + Upload Photos
+                    </button>
+                    <button onclick="requireUnlocked(() => { switchTab('works'); openWorkModal(); })" class="px-3.5 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-extrabold transition">
+                        + Upload Work File
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Search Across All Records -->
+            <div class="relative">
+                <svg class="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+                <input
+                    type="text"
+                    id="global-search"
+                    oninput="renderAllOverview()"
+                    placeholder="Type here to search your Resume, Notes, Designs, or Works..."
+                    class="w-full pl-12 pr-4 py-3.5 text-sm sm:text-base bg-white border border-slate-300 rounded-2xl shadow-2xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition"
+                >
+            </div>
+
+            <!-- 4 Clear Summary Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div onclick="switchTab('resume')" class="cursor-pointer bg-white border border-slate-200 hover:border-indigo-400 rounded-2xl p-5 shadow-2xs transition">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+                        </span>
+                        <span class="text-xs font-bold text-indigo-600">Open →</span>
+                    </div>
+                    <div class="text-lg font-extrabold text-slate-900">My Resume</div>
+                    <p id="overview-resume-role" class="text-xs text-slate-500 mt-1 truncate">Ready to view & export PDF</p>
+                </div>
+
+                <div onclick="switchTab('notes')" class="cursor-pointer bg-white border border-slate-200 hover:border-amber-400 rounded-2xl p-5 shadow-2xs transition">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
+                        </span>
+                        <span class="text-xs font-bold text-amber-600">Open →</span>
+                    </div>
+                    <div class="text-2xl font-extrabold text-slate-900"><span id="stat-notes-count">0</span> Notes</div>
+                    <p class="text-xs text-slate-500 mt-1">Study, Personal & Important memos</p>
+                </div>
+
+                <div onclick="switchTab('designs')" class="cursor-pointer bg-white border border-slate-200 hover:border-pink-400 rounded-2xl p-5 shadow-2xs transition">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="w-10 h-10 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5z"/></svg>
+                        </span>
+                        <span class="text-xs font-bold text-pink-600">Open →</span>
+                    </div>
+                    <div class="text-2xl font-extrabold text-slate-900"><span id="stat-designs-count">0</span> Designs</div>
+                    <p class="text-xs text-slate-500 mt-1">Canva, Graphics, UI & Artwork</p>
+                </div>
+
+                <div onclick="switchTab('works')" class="cursor-pointer bg-white border border-slate-200 hover:border-emerald-400 rounded-2xl p-5 shadow-2xs transition">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38"/></svg>
+                        </span>
+                        <span class="text-xs font-bold text-emerald-600">Open →</span>
+                    </div>
+                    <div class="text-2xl font-extrabold text-slate-900"><span id="stat-works-count">0</span> Works</div>
+                    <p class="text-xs text-slate-500 mt-1">Projects, PDFs & Uploaded Files</p>
+                </div>
+            </div>
+
+            <!-- Unified Records Feed / Search Results -->
+            <div id="all-records-feed" class="space-y-4">
+                <!-- Populated dynamically -->
+            </div>
+
+            <!-- Storage Safety Footer Card -->
+            <div class="bg-indigo-50/70 border border-indigo-200/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="text-xs sm:text-sm text-indigo-950">
+                    <span class="font-bold">Permanent Record & Multi-Device Safety:</span> <span id="storage-size-label" class="font-semibold">0 KB</span> stored locally + synced to Vault Code <strong id="footer-vault-code">prinsi-chhatrola-vault</strong>. Records cannot be permanently deleted.
+                </div>
+                <button onclick="downloadBackupJSON()" class="self-start sm:self-center px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shrink-0 transition">
+                    Download Full Backup
+                </button>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 1: RESUME BUILDER, PDF UPLOAD & PREVIEW ==================== -->
+        <section id="section-resume" class="hidden space-y-6 fade-in">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs">
+                <div>
+                    <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900">Prinsi Chhatrola's Resume & PDF Files</h2>
+                    <p class="text-sm text-slate-500 mt-0.5">Upload your PDF/DOC resume from phone or laptop, or edit your live resume below.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <label onclick="return checkUnlockClick(event)" class="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-bold shadow-xs cursor-pointer transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
+                        <span>Upload Resume PDF / File</span>
+                        <input type="file" id="resume-pdf-upload" accept=".pdf,.doc,.docx,image/*" onchange="handleResumeFileUpload(event)" class="hidden">
+                    </label>
+                    <button onclick="openResumePreview()" class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-md shadow-indigo-500/20 transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z"/></svg>
+                        <span>Preview & Save as PDF</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Saved Device Resume PDFs & Files List -->
+            <div id="uploaded-resumes-box" class="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-extrabold uppercase tracking-wider text-slate-700">Uploaded Device Resume Files (PDF / Images / Docs)</h3>
+                    <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">Protected • Never Deleted</span>
+                </div>
+                <div id="uploaded-resumes-list" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Guided Resume Form -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-7 shadow-2xs space-y-5">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1.5">Full Name</label>
+                        <input type="text" id="res-fullname" oninput="autoSaveResume()" class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl outline-none focus:bg-white focus:border-indigo-500 transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1.5">Headline / Target Role</label>
+                        <input type="text" id="res-headline" oninput="autoSaveResume()" placeholder="e.g., Creative Designer & Web Developer" class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl outline-none focus:bg-white focus:border-indigo-500 transition">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1.5">Email Address</label>
+                        <input type="email" id="res-email" oninput="autoSaveResume()" placeholder="prinsi@email.com" class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl outline-none focus:bg-white focus:border-indigo-500 transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1.5">Phone Number</label>
+                        <input type="text" id="res-phone" oninput="autoSaveResume()" placeholder="+91 98765 43210" class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl outline-none focus:bg-white focus:border-indigo-500 transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1.5">Location (City, State)</label>
+                        <input type="text" id="res-location" oninput="autoSaveResume()" placeholder="Ahmedabad, Gujarat" class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl outline-none focus:bg-white focus:border-indigo-500 transition">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1.5">Career Objective / Summary</label>
+                    <textarea id="res-summary" rows="3" oninput="autoSaveResume()" placeholder="Write a short 2–3 line introduction about your strengths and goals..." class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl outline-none focus:bg-white focus:border-indigo-500 transition leading-relaxed"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1.5">Skills (Separate with commas)</label>
+                    <input type="text" id="res-skills" oninput="autoSaveResume()" placeholder="Canva, Graphic Design, HTML/CSS, MS Office, Communication, Project Management" class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl outline-none focus:bg-white focus:border-indigo-500 transition">
+                    <div id="res-skills-preview" class="flex flex-wrap gap-1.5 mt-2.5"></div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1.5">Education (One entry per line)</label>
+                    <textarea id="res-education" rows="3" oninput="autoSaveResume()" placeholder="• Bachelor's / Master's Degree — University Name (Year)&#10;• Higher Secondary (12th) — School Name" class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl outline-none focus:bg-white focus:border-indigo-500 transition leading-relaxed"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1.5">Experience, Internships & Key Projects (One bullet per line)</label>
+                    <textarea id="res-experience" rows="4" oninput="autoSaveResume()" placeholder="• Created brand logos and social media campaigns using Canva.&#10;• Built personal portfolio and record vault workspace." class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl outline-none focus:bg-white focus:border-indigo-500 transition leading-relaxed"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1.5">Portfolio / LinkedIn / Website Links</label>
+                    <input type="text" id="res-links" oninput="autoSaveResume()" placeholder="linkedin.com/in/prinsichhatrola | behance.net/prinsi" class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl outline-none focus:bg-white focus:border-indigo-500 transition">
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 2: NOTES ==================== -->
+        <section id="section-notes" class="hidden space-y-6 fade-in">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900">Quick Notes</h2>
+                    <p class="text-sm text-slate-500">Save important memos, study notes, passwords/hints, and daily ideas.</p>
+                </div>
+                <button onclick="requireUnlocked(() => openNoteModal())" class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-xs transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                    <span>Add New Note</span>
+                </button>
+            </div>
+
+            <!-- Filter & Search Bar for Notes -->
+            <div class="flex flex-col sm:flex-row gap-3">
+                <input
+                    type="text"
+                    id="notes-search"
+                    oninput="renderNotes()"
+                    placeholder="Search notes by title or keyword..."
+                    class="flex-1 px-4 py-2.5 text-sm bg-white border border-slate-300 rounded-xl outline-none focus:border-indigo-500"
+                >
+                <select id="notes-filter-cat" onchange="renderNotes()" class="px-4 py-2.5 text-sm font-semibold bg-white border border-slate-300 rounded-xl outline-none focus:border-indigo-500">
+                    <option value="All">All Categories</option>
+                    <option value="Personal">Personal</option>
+                    <option value="Study">Study</option>
+                    <option value="Work">Work</option>
+                    <option value="Important">Important</option>
+                </select>
+            </div>
+
+            <div id="notes-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <!-- Populated dynamically -->
+            </div>
+        </section>
+
+        <!-- ==================== TAB 3: DESIGNS & PHOTOS ==================== -->
+        <section id="section-designs" class="hidden space-y-6 fade-in">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900">Designs & Device Photos Gallery</h2>
+                    <p class="text-sm text-slate-500">Upload photos from phone or laptop, Canva designs, graphics, and UI previews.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <label onclick="return checkUnlockClick(event)" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-sm font-bold shadow-xs cursor-pointer transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 19.5h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5z"/></svg>
+                        <span>Quick Upload Photos</span>
+                        <input type="file" accept="image/*" multiple onchange="handleMultiPhotoUpload(event)" class="hidden">
+                    </label>
+                    <button onclick="requireUnlocked(() => openDesignModal())" class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-xs transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                        <span>Add Design / Link</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="flex flex-wrap gap-2" id="design-tool-filters">
+                <button onclick="setDesignFilter('All')" data-dtool="All" class="dtool-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white">All Designs & Photos</button>
+                <button onclick="setDesignFilter('Photo')" data-dtool="Photo" class="dtool-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-300 text-slate-700 hover:bg-slate-100">Photos</button>
+                <button onclick="setDesignFilter('Canva')" data-dtool="Canva" class="dtool-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-300 text-slate-700 hover:bg-slate-100">Canva</button>
+                <button onclick="setDesignFilter('Graphic')" data-dtool="Graphic" class="dtool-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-300 text-slate-700 hover:bg-slate-100">Graphic</button>
+                <button onclick="setDesignFilter('UI')" data-dtool="UI" class="dtool-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-300 text-slate-700 hover:bg-slate-100">UI</button>
+                <button onclick="setDesignFilter('Art')" data-dtool="Art" class="dtool-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-300 text-slate-700 hover:bg-slate-100">Art</button>
+            </div>
+
+            <div id="designs-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                <!-- Populated dynamically -->
+            </div>
+        </section>
+
+        <!-- ==================== TAB 4: WORKS, PROJECTS & DEVICE FILES ==================== -->
+        <section id="section-works" class="hidden space-y-6 fade-in">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900">Works, Projects & Device Files</h2>
+                    <p class="text-sm text-slate-500">Upload work PDFs, certificates, documents, and track all your projects safely.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <label onclick="return checkUnlockClick(event)" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-xs cursor-pointer transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+                        <span>Quick Upload Work PDF / File</span>
+                        <input type="file" accept=".pdf,.doc,.docx,.txt,image/*" multiple onchange="handleQuickWorkFilesUpload(event)" class="hidden">
+                    </label>
+                    <button onclick="requireUnlocked(() => openWorkModal())" class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-xs transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                        <span>Add Work / Project</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Status Filter Buttons -->
+            <div class="flex flex-wrap gap-2">
+                <button onclick="setWorkStatusFilter('All')" data-wstatus="All" class="wstatus-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white">All Works</button>
+                <button onclick="setWorkStatusFilter('HasFile')" data-wstatus="HasFile" class="wstatus-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-300 text-slate-700 hover:bg-slate-100">With PDF / File</button>
+                <button onclick="setWorkStatusFilter('Completed')" data-wstatus="Completed" class="wstatus-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-300 text-slate-700 hover:bg-slate-100">Completed</button>
+                <button onclick="setWorkStatusFilter('In Progress')" data-wstatus="In Progress" class="wstatus-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-300 text-slate-700 hover:bg-slate-100">In Progress</button>
+                <button onclick="setWorkStatusFilter('Planned')" data-wstatus="Planned" class="wstatus-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-300 text-slate-700 hover:bg-slate-100">Planned</button>
+            </div>
+
+            <div id="works-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <!-- Populated dynamically -->
+            </div>
+        </section>
+
+        <!-- ==================== TAB 5: SAFE ARCHIVE (NO-DELETE PROTECTION) ==================== -->
+        <section id="section-archived" class="hidden space-y-6 fade-in">
+            <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Zero-Deletion Guarantee</span>
+                    </div>
+                    <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">Safe Archive — Permanently Preserved Records</h2>
+                    <p class="text-sm text-slate-500 mt-0.5">PrinsiVault never deletes your records. Archived notes, designs, photos, and works stay safely stored here and can be restored anytime.</p>
+                </div>
+            </div>
+
+            <div id="archived-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Populated dynamically -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ==================== MODALS ==================== -->
+
+    <!-- Multi-Device Cloud Sync Modal (Phone & Laptop Access) -->
+    <div id="sync-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl fade-in space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-cyan-100 text-cyan-700 flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900">Phone & Laptop Multi-Device Sync</h3>
+                        <p class="text-xs text-slate-500">Access all your records on any device</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('sync-modal')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100">✕</button>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-cyan-50 border border-cyan-200 text-xs text-cyan-950 space-y-1">
+                <p class="font-bold">How to open your records on both Laptop & Phone:</p>
+                <p>1. Open this app on your phone and laptop.</p>
+                <p>2. Enter the exact same <strong>Personal Vault Sync Code</strong> below on both devices and click <strong>Connect & Sync Now</strong>.</p>
+            </div>
+
+            <form onsubmit="connectVaultRoom(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Your Personal Vault Sync Code</label>
+                    <input type="text" id="vault-room-input" required placeholder="e.g., prinsi-chhatrola-vault" class="w-full px-3.5 py-2.5 text-sm font-bold bg-slate-50 border border-slate-300 rounded-xl outline-none focus:border-indigo-500">
+                    <p class="text-[11px] text-slate-500 mt-1">Default: <code class="bg-slate-100 px-1.5 py-0.5 rounded font-bold">prinsi-chhatrola-vault</code> (Make it unique so only you know it!)</p>
+                </div>
+
+                <div class="flex items-center justify-between text-xs bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <span class="text-slate-600 font-semibold">Cloud Connection Status:</span>
+                    <span id="modal-cloud-detail" class="font-bold text-emerald-700">Connected & Auto-Syncing</span>
+                </div>
+
+                <div class="flex flex-wrap justify-between gap-2 pt-3 border-t border-slate-200">
+                    <button type="button" onclick="forcePushToCloud()" class="px-4 py-2 text-xs font-bold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800">Push Local Data to Cloud</button>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="closeModal('sync-modal')" class="px-4 py-2 text-sm font-semibold rounded-xl border border-slate-300 hover:bg-slate-100">Close</button>
+                        <button type="submit" class="px-5 py-2 text-sm font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white">Connect & Sync Now</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Vault Lock PIN Modal -->
+    <div id="pin-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-6 shadow-2xl fade-in">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+                <h3 id="pin-modal-title" class="text-lg font-bold text-slate-900">Vault Security PIN</h3>
+                <button onclick="closeModal('pin-modal')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100">✕</button>
+            </div>
+            <form onsubmit="submitVaultPin(event)" class="space-y-4 mt-4">
+                <p id="pin-modal-desc" class="text-xs text-slate-600 leading-relaxed">Set a 4-digit PIN to lock your vault in Read-Only mode so no one can edit your records.</p>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">4-Digit PIN</label>
+                    <input type="password" id="vault-pin-input" maxlength="6" pattern="[0-9]*" inputmode="numeric" required placeholder="e.g., 1234" class="w-full px-3.5 py-2.5 text-center tracking-widest text-lg font-extrabold bg-slate-50 border border-slate-300 rounded-xl outline-none focus:border-indigo-500">
+                </div>
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                    <button type="button" onclick="closeModal('pin-modal')" class="px-4 py-2 text-sm font-semibold rounded-xl border border-slate-300 hover:bg-slate-100">Cancel</button>
+                    <button type="submit" id="pin-submit-btn" class="px-5 py-2 text-sm font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white">Confirm PIN</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Built-in Document / PDF / Photo Viewer Modal -->
+    <div id="file-viewer-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/70 backdrop-blur-xs p-4">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-4xl w-full shadow-2xl max-h-[92vh] flex flex-col overflow-hidden fade-in">
+            <div class="flex items-center justify-between px-5 py-3.5 bg-slate-100 border-b border-slate-200 gap-3">
+                <div class="min-w-0">
+                    <h3 id="viewer-file-title" class="font-bold text-sm sm:text-base text-slate-900 truncate">File Preview</h3>
+                    <p id="viewer-file-meta" class="text-xs text-slate-500 truncate">PDF / Image Document</p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <a id="viewer-download-btn" href="#" download="file" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition">
+                        Download File
+                    </a>
+                    <button onclick="closeModal('file-viewer-modal')" class="px-3 py-2 rounded-xl text-slate-600 hover:bg-slate-200 text-xs font-bold">Close</button>
+                </div>
+            </div>
+            <div id="viewer-body" class="flex-1 bg-slate-200/80 overflow-auto flex items-center justify-center p-4 min-h-[55vh]">
+                <!-- Injected PDF iframe or Image preview -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Edit Modal -->
+    <div id="profile-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl fade-in">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+                <h3 class="text-lg font-bold text-slate-900">Edit Personal Profile</h3>
+                <button onclick="closeModal('profile-modal')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100">✕</button>
+            </div>
+            <form onsubmit="saveProfile(event)" class="space-y-4 mt-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Your Name</label>
+                    <input type="text" id="edit-prof-name" required class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Short Bio / Tagline</label>
+                    <textarea id="edit-prof-bio" rows="2" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl outline-none focus:border-indigo-500"></textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Contact Line</label>
+                    <input type="text" id="edit-prof-contact" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl outline-none focus:border-indigo-500">
+                </div>
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                    <button type="button" onclick="closeModal('profile-modal')" class="px-4 py-2 text-sm font-semibold rounded-xl border border-slate-300 hover:bg-slate-100">Cancel</button>
+                    <button type="submit" class="px-5 py-2 text-sm font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white">Save Profile</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Printable A4 Resume Modal -->
+    <div id="resume-print-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-3xl w-full shadow-2xl max-h-[92vh] flex flex-col overflow-hidden fade-in">
+            <div class="no-print flex items-center justify-between px-5 py-4 bg-slate-100 border-b border-slate-200">
+                <span class="font-bold text-sm sm:text-base text-slate-800">A4 Resume Preview — Ready for PDF</span>
+                <div class="flex items-center gap-2">
+                    <button onclick="window.print()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold shadow-xs transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z"/></svg>
+                        <span>Print / Save as PDF</span>
+                    </button>
+                    <button onclick="closeModal('resume-print-modal')" class="px-3 py-2 rounded-xl text-slate-600 hover:bg-slate-200 text-sm font-bold">Close</button>
+                </div>
+            </div>
+            <div class="overflow-y-auto p-4 sm:p-8 bg-slate-200/70 flex-1">
+                <div id="resume-print-sheet" class="bg-white text-slate-900 max-w-[210mm] mx-auto p-8 sm:p-10 rounded-xl shadow-md space-y-5">
+                    <!-- Injected A4 Resume HTML -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Note Add/Edit Modal -->
+    <div id="note-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl fade-in">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+                <h3 id="note-modal-heading" class="text-lg font-bold text-slate-900">Add New Note</h3>
+                <button onclick="closeModal('note-modal')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100">✕</button>
+            </div>
+            <form onsubmit="saveNote(event)" class="space-y-4 mt-4">
+                <input type="hidden" id="note-id">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Note Title *</label>
+                    <input type="text" id="note-title" required placeholder="e.g., Important Study Points" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Category</label>
+                    <select id="note-category" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl outline-none focus:border-indigo-500">
+                        <option value="Personal">Personal</option>
+                        <option value="Study">Study</option>
+                        <option value="Work">Work</option>
+                        <option value="Important">Important</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Note Content *</label>
+                    <textarea id="note-content" rows="5" required placeholder="Type your note here..." class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl outline-none focus:border-indigo-500"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                    <button type="button" onclick="closeModal('note-modal')" class="px-4 py-2 text-sm font-semibold rounded-xl border border-slate-300 hover:bg-slate-100">Cancel</button>
+                    <button type="submit" class="px-5 py-2 text-sm font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white">Save Note</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Design Add/Edit Modal -->
+    <div id="design-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl my-auto fade-in">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+                <h3 id="design-modal-heading" class="text-lg font-bold text-slate-900">Add Design Work</h3>
+                <button onclick="closeModal('design-modal')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100">✕</button>
+            </div>
+            <form onsubmit="saveDesign(event)" class="space-y-4 mt-4">
+                <input type="hidden" id="design-id">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Design Title *</label>
+                        <input type="text" id="design-title" required placeholder="e.g., Instagram Poster" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Tool / Category</label>
+                    <select id="design-tool" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl outline-none focus:border-indigo-500">
+                        <option value="Photo">Photo</option>
+                        <option value="Canva">Canva</option>
+                        <option value="Graphic">Graphic</option>
+                        <option value="UI">UI</option>
+                        <option value="Art">Art</option>
+                    </select>
+                </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Design Link URL (Canva / Drive / Figma)</label>
+                    <input type="url" id="design-link" placeholder="https://www.canva.com/design/..." class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Upload Preview Image (Auto-compressed for safety)</label>
+                    <input type="file" accept="image/*" onchange="compressDesignImage(event)" class="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
+                    <input type="hidden" id="design-image-data">
+                    <div id="design-preview-box" class="hidden mt-2.5 h-32 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden relative">
+                        <img id="design-preview-img" src="" alt="Preview" class="max-h-full max-w-full object-contain">
+                        <button type="button" onclick="clearDesignImage()" class="absolute top-2 right-2 px-2 py-1 rounded-lg bg-slate-900/70 text-white text-[11px] font-semibold">Remove</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Notes / Color Codes</label>
+                    <textarea id="design-notes" rows="2" placeholder="Font names, colors, or client notes..." class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl outline-none focus:border-indigo-500"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                    <button type="button" onclick="closeModal('design-modal')" class="px-4 py-2 text-sm font-semibold rounded-xl border border-slate-300 hover:bg-slate-100">Cancel</button>
+                    <button type="submit" class="px-5 py-2 text-sm font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white">Save Design</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Works & Projects Add/Edit Modal -->
+    <div id="work-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl fade-in">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+                <h3 id="work-modal-heading" class="text-lg font-bold text-slate-900">Add Work / Project</h3>
+                <button onclick="closeModal('work-modal')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100">✕</button>
+            </div>
+            <form onsubmit="saveWork(event)" class="space-y-4 mt-4">
+                <input type="hidden" id="work-id">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Project / Work Title *</label>
+                    <input type="text" id="work-title" required placeholder="e.g., Personal Portfolio Website" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl outline-none focus:border-indigo-500">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Status</label>
+                        <select id="work-status" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl outline-none focus:border-indigo-500">
+                            <option value="Completed">Completed</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Planned">Planned</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Date</label>
+                        <input type="date" id="work-date" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Link or File Reference (Optional)</label>
+                    <input type="text" id="work-link" placeholder="https://... or Folder/File name" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Attach Work PDF, Certificate, Photo or Document (Optional)</label>
+                    <input type="file" id="work-file-input" accept=".pdf,.doc,.docx,.txt,image/*" onchange="handleWorkModalFile(event)" class="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer">
+                    <input type="hidden" id="work-file-data">
+                    <input type="hidden" id="work-file-name">
+                    <input type="hidden" id="work-file-type">
+                    <div id="work-file-badge" class="hidden mt-2 flex items-center justify-between px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900">
+                        <span id="work-file-badge-text" class="font-bold truncate">Attached file</span>
+                        <button type="button" onclick="clearWorkModalFile()" class="text-rose-600 font-bold ml-2">Clear</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Description *</label>
+                    <textarea id="work-desc" rows="3" required placeholder="What did you build or achieve?" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl outline-none focus:border-indigo-500"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                    <button type="button" onclick="closeModal('work-modal')" class="px-4 py-2 text-sm font-semibold rounded-xl border border-slate-300 hover:bg-slate-100">Cancel</button>
+                    <button type="submit" class="px-5 py-2 text-sm font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white">Save Work</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== RELIABLE JAVASCRIPT ENGINE ==================== -->
+    <script>
+        const STORAGE_KEY = 'prinsivault_data_v2';
+        const ROOM_STORAGE_KEY = 'prinsivault_room_code';
+        const LOCK_STATE_KEY = 'prinsivault_lock_state';
+
+        // IndexedDB Helper for Large Device PDFs & Photos
+        const IDB_NAME = 'PrinsiVaultFilesDB';
+        const IDB_STORE = 'files';
+
+        function openFilesDB() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(IDB_NAME, 1);
+                req.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(IDB_STORE)) {
+                        db.createObjectStore(IDB_STORE, { keyPath: 'id' });
+                    }
+                };
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        async function saveBinaryFileLocal(id, dataUrl) {
+            try {
+                const db = await openFilesDB();
+                const tx = db.transaction(IDB_STORE, 'readwrite');
+                tx.objectStore(IDB_STORE).put({ id, dataUrl });
+            } catch (e) {
+                console.warn('IndexedDB save fallback:', e);
+            }
+        }
+
+        async function getBinaryFileLocal(id) {
+            try {
+                const db = await openFilesDB();
+                return new Promise((resolve) => {
+                    const tx = db.transaction(IDB_STORE, 'readonly');
+                    const req = tx.objectStore(IDB_STORE).get(id);
+                    req.onsuccess = () => resolve(req.result ? req.result.dataUrl : null);
+                    req.onerror = () => resolve(null);
+                });
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // Default Starter Data Personalized for Prinsi Chhatrola
+        function getStarterData() {
+            const today = new Date().toISOString().slice(0, 10);
+            return {
+                updatedAt: Date.now(),
+                profile: {
+                    name: 'Prinsi Chhatrola',
+                    bio: 'Creative Designer, Dedicated Learner & Organizer — Storing all my resumes, notes, designs, and project records safely in one place.',
+                    contact: 'prinsi.chhatrola@email.com • Gujarat, India'
+                },
+                resume: {
+                    fullname: 'Prinsi Chhatrola',
+                    headline: 'Creative Designer & Project Coordinator',
+                    email: 'prinsi.chhatrola@email.com',
+                    phone: '+91 98765 43210',
+                    location: 'Gujarat, India',
+                    summary: 'Detail-oriented and creative individual with strong skills in visual design, digital organization, and project execution. Passionate about building clean, impactful work and continuous learning.',
+                    skills: 'Canva Design, Graphic Design, MS Office, Web Basics (HTML/CSS), Content Creation, Time Management',
+                    education: '• Bachelor\'s Degree — Gujarat University\n• Higher Secondary Education (12th) — First Class',
+                    experience: '• Designed social media graphics, logos, and presentation templates using Canva.\n• Managed personal and academic projects with structured documentation and milestones.',
+                    links: 'linkedin.com/in/prinsichhatrola'
+                },
+                resumeFiles: [],
+                notes: [
+                    {
+                        id: 'note_starter_1',
+                        title: 'Welcome to PrinsiVault!',
+                        category: 'Important',
+                        archived: false,
+                        content: 'All your notes, resume PDFs, photos, designs, and projects auto-save here automatically and sync across your Laptop & Phone.\n\nNo-Delete Protection is active: Your records can never be accidentally deleted!',
+                        updatedAt: today
+                    },
+                    {
+                        id: 'note_starter_2',
+                        title: 'Weekly Study & Design Checklist',
+                        category: 'Study',
+                        archived: false,
+                        content: '1. Upload latest PDF Resume in Resume tab\n2. Upload designs & photos from phone gallery\n3. Attach work PDFs in Works & Files tab',
+                        updatedAt: today
+                    }
+                ],
+                designs: [
+                    {
+                        id: 'des_starter_1',
+                        title: 'Brand Logo & Social Media Kit',
+                        tool: 'Canva',
+                        archived: false,
+                        link: 'https://www.canva.com',
+                        imageData: '',
+                        notes: 'Clean indigo & white aesthetic templates for social posts and personal branding.',
+                        updatedAt: today
+                    }
+                ],
+                works: [
+                    {
+                        id: 'work_starter_1',
+                        title: 'PrinsiVault Personal Record System',
+                        status: 'Completed',
+                        archived: false,
+                        date: today,
+                        link: 'Multi-Device Synced Vault',
+                        fileName: '',
+                        fileType: '',
+                        fileData: '',
+                        desc: 'Set up my personal all-in-one workspace to organize my PDF resume, notes, photos, designs, and project achievements across laptop and phone.'
+                    }
+                ]
+            };
+        }
+
+        let appData = getStarterData();
+        let currentTab = 'all';
+        let designFilter = 'All';
+        let workStatusFilter = 'All';
+        let saveTimer = null;
+
+        // Vault Lock / PIN Protection State
+        let vaultLockState = {
+            locked: false,
+            pin: ''
+        };
+        let pendingPinAction = null; // 'set-lock' | 'unlock'
+
+        // Firebase Cloud Sync State
+        let fbDb = null;
+        let fbUser = null;
+        let unsubscribeVault = null;
+        let vaultRoomCode = localStorage.getItem(ROOM_STORAGE_KEY) || 'prinsi-chhatrola-vault';
+        let isApplyingRemoteUpdate = false;
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            initAppBrandingIcons();
+            loadLockState();
+            loadFromStorage();
+            populateResumeForm();
+            renderAll();
+            updateLockUI();
+        });
+
+        window.addEventListener('firebase-sdk-ready', () => {
+            initCloudSync();
+        });
+
+        // ==================== MULTI-DEVICE CLOUD SYNC (LAPTOP & PHONE) ====================
+        async function initCloudSync() {
+            try {
+                if (typeof __firebase_config === 'undefined' || !window.FB) {
+                    updateCloudStatusUI('Offline / Local Mode', 'bg-amber-400', 'Local storage active. Enter a Vault Code anytime when cloud is available.');
+                    return;
+                }
+                const firebaseConfig = JSON.parse(__firebase_config);
+                const app = window.FB.initializeApp(firebaseConfig);
+                const auth = window.FB.getAuth(app);
+                fbDb = window.FB.getFirestore(app);
+
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await window.FB.signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await window.FB.signInAnonymously(auth);
+                }
+                fbUser = auth.currentUser;
+                if (fbUser) {
+                    subscribeToVaultRoom(vaultRoomCode);
+                }
+            } catch (err) {
+                console.warn('Cloud sync init notice:', err);
+                updateCloudStatusUI('Local Safe Mode', 'bg-amber-400', 'Working offline safely on this device.');
+            }
+        }
+
+        function sanitizeRoomCode(code) {
+            return (code || 'prinsi-chhatrola-vault').trim().toLowerCase().replace(/[^a-z0-9-_]/g, '-') || 'prinsi-chhatrola-vault';
+        }
+
+        function subscribeToVaultRoom(roomCode) {
+            if (!fbDb || !fbUser) return;
+            const cleanRoom = sanitizeRoomCode(roomCode);
+            vaultRoomCode = cleanRoom;
+            localStorage.setItem(ROOM_STORAGE_KEY, cleanRoom);
+
+            const footerCodeEl = document.getElementById('footer-vault-code');
+            if (footerCodeEl) footerCodeEl.textContent = cleanRoom;
+
+            if (unsubscribeVault) {
+                unsubscribeVault();
+                unsubscribeVault = null;
+            }
+
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const vaultDocRef = window.FB.doc(fbDb, 'artifacts', appId, 'public', 'data', 'prinsivault_rooms', cleanRoom);
+
+            updateCloudStatusUI(`Syncing: ${cleanRoom}`, 'bg-cyan-400', `Connecting to "${cleanRoom}"...`);
+
+            unsubscribeVault = window.FB.onSnapshot(
+                vaultDocRef,
+                (snap) => {
+                    updateCloudStatusUI(`Synced: ${cleanRoom}`, 'bg-emerald-500', `Live synced across Laptop & Phone (${cleanRoom})`);
+                    if (snap.exists()) {
+                        const remote = snap.data();
+                        if (remote && remote.payloadJson) {
+                            try {
+                                const parsedRemote = JSON.parse(remote.payloadJson);
+                                if ((parsedRemote.updatedAt || 0) > (appData.updatedAt || 0)) {
+                                    isApplyingRemoteUpdate = true;
+                                    appData = normalizeAppData(parsedRemote);
+                                    localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+                                    populateResumeForm();
+                                    renderAll();
+                                    isApplyingRemoteUpdate = false;
+                                    showToast('Synced latest records from your other device!');
+                                }
+                            } catch (e) {
+                                console.error('Remote parse error:', e);
+                            }
+                        }
+                    } else {
+                        // First time creating this Vault Room -> push current local data
+                        pushDataToCloud();
+                    }
+                },
+                (err) => {
+                    console.warn('Firestore snapshot error:', err);
+                    updateCloudStatusUI('Local Safe Mode', 'bg-amber-400', 'Saved locally on device.');
+                }
+            );
+        }
+
+        async function pushDataToCloud() {
+            if (!fbDb || !fbUser || isApplyingRemoteUpdate) return;
+            try {
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const cleanRoom = sanitizeRoomCode(vaultRoomCode);
+                const vaultDocRef = window.FB.doc(fbDb, 'artifacts', appId, 'public', 'data', 'prinsivault_rooms', cleanRoom);
+
+                // Keep cloud payload under Firestore 1MB limit by trimming oversized inline binaries if needed while keeping metadata
+                const cloudCopy = JSON.parse(JSON.stringify(appData));
+                let jsonStr = JSON.stringify(cloudCopy);
+                if (jsonStr.length > 880000) {
+                    // Strip heavy binary blobs from older items so sync never fails
+                    cloudCopy.resumeFiles = (cloudCopy.resumeFiles || []).map((f, i) => i === 0 ? f : { ...f, fileData: '' });
+                    cloudCopy.works = (cloudCopy.works || []).map((w, i) => i < 2 ? w : { ...w, fileData: '' });
+                    jsonStr = JSON.stringify(cloudCopy);
+                }
+
+                await window.FB.setDoc(vaultDocRef, {
+                    owner: 'Prinsi Chhatrola',
+                    room: cleanRoom,
+                    updatedAt: appData.updatedAt || Date.now(),
+                    payloadJson: jsonStr
+                }, { merge: true });
+            } catch (err) {
+                console.warn('Cloud push error:', err);
+            }
+        }
+
+        function updateCloudStatusUI(shortLabel, dotColorClass, detailText) {
+            const textEl = document.getElementById('cloud-status-text');
+            const dotDesk = document.getElementById('cloud-dot-desktop');
+            const dotMob = document.getElementById('cloud-dot-mobile');
+            const modalDetail = document.getElementById('modal-cloud-detail');
+
+            if (textEl) textEl.textContent = shortLabel;
+            if (dotDesk) dotDesk.className = `w-2 h-2 rounded-full ${dotColorClass}`;
+            if (dotMob) dotMob.className = `w-2 h-2 rounded-full ${dotColorClass}`;
+            if (modalDetail) modalDetail.textContent = detailText;
+        }
+
+        function openSyncModal() {
+            document.getElementById('vault-room-input').value = vaultRoomCode;
+            openModal('sync-modal');
+        }
+
+        function connectVaultRoom(e) {
+            e.preventDefault();
+            const newCode = sanitizeRoomCode(document.getElementById('vault-room-input').value);
+            vaultRoomCode = newCode;
+            localStorage.setItem(ROOM_STORAGE_KEY, newCode);
+            const footerCodeEl = document.getElementById('footer-vault-code');
+            if (footerCodeEl) footerCodeEl.textContent = newCode;
+
+            if (fbDb && fbUser) {
+                subscribeToVaultRoom(newCode);
+            }
+            closeModal('sync-modal');
+            showToast(`Connected to Vault Code: ${newCode}`);
+        }
+
+        function forcePushToCloud() {
+            appData.updatedAt = Date.now();
+            saveToStorage(true);
+            pushDataToCloud();
+            showToast('Uploaded all records to Cloud Sync!');
+        }
+
+        // ==================== VAULT LOCK / READ-ONLY PERMISSION GUARD ====================
+        function loadLockState() {
+            try {
+                const raw = localStorage.getItem(LOCK_STATE_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    vaultLockState = { locked: !!parsed.locked, pin: parsed.pin || '' };
+                }
+            } catch (e) {}
+        }
+
+        function saveLockState() {
+            try {
+                localStorage.setItem(LOCK_STATE_KEY, JSON.stringify(vaultLockState));
+            } catch (e) {}
+        }
+
+        function updateLockUI() {
+            const btn = document.getElementById('vault-lock-btn');
+            const banner = document.getElementById('locked-banner');
+            const labels = document.querySelectorAll('.lock-status-label');
+            const inputs = document.querySelectorAll('#section-resume input, #section-resume textarea');
+
+            if (vaultLockState.locked) {
+                if (btn) btn.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-900 text-xs font-bold transition';
+                if (banner) banner.classList.remove('hidden');
+                labels.forEach(el => el.textContent = 'Locked (Read-Only)');
+                inputs.forEach(inp => inp.setAttribute('readonly', 'true'));
+            } else {
+                if (btn) btn.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 text-xs font-bold transition';
+                if (banner) banner.classList.add('hidden');
+                labels.forEach(el => el.textContent = 'Unlocked (PIN)');
+                inputs.forEach(inp => inp.removeAttribute('readonly'));
+            }
+        }
+
+        function toggleVaultLock() {
+            const pinInput = document.getElementById('vault-pin-input');
+            pinInput.value = '';
+            if (vaultLockState.locked) {
+                pendingPinAction = 'unlock';
+                document.getElementById('pin-modal-title').textContent = 'Unlock Vault for Editing';
+                document.getElementById('pin-modal-desc').textContent = 'Enter your PIN to unlock editing and file uploads.';
+                document.getElementById('pin-submit-btn').textContent = 'Unlock Vault';
+            } else {
+                pendingPinAction = 'set-lock';
+                document.getElementById('pin-modal-title').textContent = 'Lock Vault (Read-Only Permission)';
+                document.getElementById('pin-modal-desc').textContent = vaultLockState.pin
+                    ? 'Enter your PIN to lock your vault so others cannot edit or change any records.'
+                    : 'Create a 4-digit PIN to lock your vault in Read-Only mode.';
+                document.getElementById('pin-submit-btn').textContent = 'Lock Vault';
+            }
+            openModal('pin-modal');
+        }
+
+        function submitVaultPin(e) {
+            e.preventDefault();
+            const entered = (document.getElementById('vault-pin-input').value || '').trim();
+            if (!entered || entered.length < 4) {
+                showToast('Please enter at least 4 digits.', 'error');
+                return;
+            }
+
+            if (pendingPinAction === 'set-lock') {
+                if (vaultLockState.pin && vaultLockState.pin !== entered) {
+                    showToast('Incorrect PIN. Use your saved PIN to lock.', 'error');
+                    return;
+                }
+                vaultLockState.pin = entered;
+                vaultLockState.locked = true;
+                saveLockState();
+                updateLockUI();
+                closeModal('pin-modal');
+                showToast('Vault Locked! Records are now in Read-Only mode.');
+            } else if (pendingPinAction === 'unlock') {
+                if (entered === vaultLockState.pin) {
+                    vaultLockState.locked = false;
+                    saveLockState();
+                    updateLockUI();
+                    closeModal('pin-modal');
+                    showToast('Vault Unlocked! You can now add and edit records.');
+                } else {
+                    showToast('Wrong PIN! Vault remains locked.', 'error');
+                }
+            }
+        }
+
+        function requireUnlocked(callback) {
+            if (vaultLockState.locked) {
+                showToast('Vault is Locked (Read-Only). Unlock with PIN first to make changes.', 'error');
+                toggleVaultLock();
+                return false;
+            }
+            if (typeof callback === 'function') callback();
+            return true;
+        }
+
+        function checkUnlockClick(event) {
+            if (vaultLockState.locked) {
+                event.preventDefault();
+                showToast('Vault is Locked (Read-Only). Unlock with PIN first.', 'error');
+                toggleVaultLock();
+                return false;
+            }
+            return true;
+        }
+
+        // ==================== ICON & STORAGE HELPERS ====================
+        // Dynamically Draw Square PrinsiVault App Icon on Offscreen Canvas & Inject Favicon + PWA Manifest
+        function generatePrinsiVaultIconDataURL(size = 512) {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            const s = size / 512;
+
+            // 1. Deep Slate-Indigo Rounded Square Background
+            const bgGrad = ctx.createLinearGradient(0, 0, size, size);
+            bgGrad.addColorStop(0, '#0f172a');
+            bgGrad.addColorStop(0.5, '#1e1b4b');
+            bgGrad.addColorStop(1, '#0f172a');
+
+            const radius = 108 * s;
+            ctx.beginPath();
+            ctx.moveTo(radius, 0);
+            ctx.lineTo(size - radius, 0);
+            ctx.quadraticCurveTo(size, 0, size, radius);
+            ctx.lineTo(size, size - radius);
+            ctx.quadraticCurveTo(size, size, size - radius, size);
+            ctx.lineTo(radius, size);
+            ctx.quadraticCurveTo(0, size, 0, size - radius);
+            ctx.lineTo(0, radius);
+            ctx.quadraticCurveTo(0, 0, radius, 0);
+            ctx.closePath();
+            ctx.fillStyle = bgGrad;
+            ctx.fill();
+
+            // Subtle Ambient Glow Behind Shield
+            const glow = ctx.createRadialGradient(256 * s, 265 * s, 20 * s, 256 * s, 265 * s, 210 * s);
+            glow.addColorStop(0, 'rgba(56, 189, 248, 0.28)');
+            glow.addColorStop(0.6, 'rgba(139, 92, 246, 0.16)');
+            glow.addColorStop(1, 'rgba(15, 23, 42, 0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, size, size);
+
+            // Signature Cyan-to-Purple Gradient
+            const brandGrad = ctx.createLinearGradient(96 * s, 80 * s, 416 * s, 430 * s);
+            brandGrad.addColorStop(0, '#22d3ee');
+            brandGrad.addColorStop(0.5, '#6366f1');
+            brandGrad.addColorStop(1, '#c084fc');
+
+            // 2. Stylized Emerging Documents at Top
+            // Left Cyan Document
+            ctx.save();
+            ctx.translate(185 * s, 130 * s);
+            ctx.rotate(-0.24);
+            ctx.fillStyle = '#22d3ee';
+            ctx.beginPath();
+            ctx.roundRect(-42 * s, -55 * s, 84 * s, 110 * s, 10 * s);
+            ctx.fill();
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 6 * s;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(-24 * s, -30 * s);
+            ctx.lineTo(22 * s, -30 * s);
+            ctx.moveTo(-24 * s, -12 * s);
+            ctx.lineTo(14 * s, -12 * s);
+            ctx.stroke();
+            ctx.restore();
+
+            // Center-Top Mint/Indigo Document
+            ctx.save();
+            ctx.translate(256 * s, 112 * s);
+            ctx.fillStyle = '#818cf8';
+            ctx.beginPath();
+            ctx.roundRect(-40 * s, -52 * s, 80 * s, 104 * s, 10 * s);
+            ctx.fill();
+            ctx.restore();
+
+            // Right Purple Design Document
+            ctx.save();
+            ctx.translate(328 * s, 132 * s);
+            ctx.rotate(0.24);
+            ctx.fillStyle = '#c084fc';
+            ctx.beginPath();
+            ctx.roundRect(-42 * s, -55 * s, 84 * s, 110 * s, 10 * s);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(-14 * s, -26 * s, 8 * s, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(-26 * s, 4 * s);
+            ctx.lineTo(-6 * s, -16 * s);
+            ctx.lineTo(10 * s, -2 * s);
+            ctx.lineTo(20 * s, -12 * s);
+            ctx.lineTo(30 * s, 4 * s);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+
+            // 3. Main Shield Body
+            ctx.beginPath();
+            ctx.moveTo(256 * s, 96 * s);
+            ctx.lineTo(404 * s, 146 * s);
+            ctx.lineTo(404 * s, 266 * s);
+            ctx.bezierCurveTo(404 * s, 362 * s, 338 * s, 426 * s, 256 * s, 458 * s);
+            ctx.bezierCurveTo(174 * s, 426 * s, 108 * s, 362 * s, 108 * s, 266 * s);
+            ctx.lineTo(108 * s, 146 * s);
+            ctx.closePath();
+            ctx.fillStyle = '#0f172a';
+            ctx.fill();
+            ctx.lineWidth = 16 * s;
+            ctx.strokeStyle = brandGrad;
+            ctx.stroke();
+
+            // 4. Circular Vault Door
+            const cx = 256 * s;
+            const cy = 274 * s;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 108 * s, 0, Math.PI * 2);
+            ctx.fillStyle = '#1e1b4b';
+            ctx.fill();
+            ctx.lineWidth = 13 * s;
+            ctx.strokeStyle = brandGrad;
+            ctx.stroke();
+
+            // Vault Hinges (Left)
+            ctx.fillStyle = '#22d3ee';
+            ctx.beginPath();
+            ctx.roundRect(136 * s, 226 * s, 20 * s, 30 * s, 6 * s);
+            ctx.roundRect(136 * s, 292 * s, 20 * s, 30 * s, 6 * s);
+            ctx.fill();
+
+            // Vault Locking Spokes (Right)
+            ctx.strokeStyle = '#c084fc';
+            ctx.lineWidth = 10 * s;
+            ctx.lineCap = 'round';
+            [
+                [-0.55, 76, 102],
+                [0, 80, 106],
+                [0.55, 76, 102]
+            ].forEach(([ang, r1, r2]) => {
+                ctx.beginPath();
+                ctx.moveTo(cx + Math.cos(ang) * r1 * s, cy + Math.sin(ang) * r1 * s);
+                ctx.lineTo(cx + Math.cos(ang) * r2 * s, cy + Math.sin(ang) * r2 * s);
+                ctx.stroke();
+            });
+
+            // 5. Center 'PC' Monogram Badge
+            ctx.beginPath();
+            ctx.arc(cx, cy, 56 * s, 0, Math.PI * 2);
+            ctx.fillStyle = '#0f172a';
+            ctx.fill();
+            ctx.lineWidth = 9 * s;
+            ctx.strokeStyle = brandGrad;
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `900 ${Math.round(52 * s)}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('PC', cx, cy + 3 * s);
+
+            return canvas.toDataURL('image/png');
+        }
+
+        function initAppBrandingIcons() {
+            try {
+                const icon192 = generatePrinsiVaultIconDataURL(192);
+                const icon512 = generatePrinsiVaultIconDataURL(512);
+
+                const faviconEl = document.getElementById('app-favicon');
+                const appleIconEl = document.getElementById('app-apple-icon');
+                const manifestEl = document.getElementById('app-manifest');
+
+                if (faviconEl) faviconEl.href = icon192;
+                if (appleIconEl) appleIconEl.href = icon512;
+
+                // Dynamic Web App Manifest for Home Screen / PWA Installation
+                const manifestData = {
+                    name: 'PrinsiVault — Personal Data & Record Manager',
+                    short_name: 'PrinsiVault',
+                    description: 'All-in-one personal workspace for Prinsi Chhatrola — Resume, Notes, Designs, and Works.',
+                    start_url: './',
+                    display: 'standalone',
+                    background_color: '#f8fafc',
+                    theme_color: '#1e1b4b',
+                    icons: [
+                        { src: icon192, sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+                        { src: icon512, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+                    ]
+                };
+
+                const manifestBlob = new Blob([JSON.stringify(manifestData)], { type: 'application/manifest+json' });
+                const manifestURL = URL.createObjectURL(manifestBlob);
+                if (manifestEl) manifestEl.href = manifestURL;
+            } catch (err) {
+                console.error('Icon generation error:', err);
+            }
+        }
+
+        function downloadAppIconPNG() {
+            const dataUrl = generatePrinsiVaultIconDataURL(512);
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = 'PrinsiVault_App_Icon_512x512.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showToast('Downloaded PrinsiVault_App_Icon_512x512.png!');
+        }
+
+        function normalizeAppData(raw) {
+            const def = getStarterData();
+            return {
+                updatedAt: raw.updatedAt || Date.now(),
+                profile: raw.profile || def.profile,
+                resume: raw.resume || def.resume,
+                resumeFiles: Array.isArray(raw.resumeFiles) ? raw.resumeFiles : [],
+                notes: Array.isArray(raw.notes) ? raw.notes : [],
+                designs: Array.isArray(raw.designs) ? raw.designs : [],
+                works: Array.isArray(raw.works) ? raw.works : []
+            };
+        }
+
+        // Bulletproof LocalStorage Load
+        function loadFromStorage() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('prinsivault_data_v1');
+                if (raw) {
+                    appData = normalizeAppData(JSON.parse(raw));
+                } else {
+                    saveToStorage(true);
+                }
+            } catch (err) {
+                console.error('Storage read error:', err);
+                showToast('Could not read saved data; loaded safe defaults.', 'error');
+            }
+        }
+
+        // Bulletproof LocalStorage Save + Automatic Cloud Sync
+        function saveToStorage(silent = false) {
+            setSaveStatus('Saving...');
+            appData.updatedAt = Date.now();
+            try {
+                const serialized = JSON.stringify(appData);
+                localStorage.setItem(STORAGE_KEY, serialized);
+                updateStorageSizeLabel(serialized.length);
+                pushDataToCloud();
+                clearTimeout(saveTimer);
+                saveTimer = setTimeout(() => {
+                    setSaveStatus('No-Delete Protected');
+                }, 250);
+                return true;
+            } catch (err) {
+                console.error('Storage quota error:', err);
+                setSaveStatus('Local Limit Near');
+                showToast('Browser local limit reached! Use "Backup" to export a copy.', 'error');
+                return false;
+            }
+        }
+
+        function setSaveStatus(text) {
+            document.querySelectorAll('.save-status-text').forEach(el => {
+                el.textContent = text;
+            });
+        }
+
+        function updateStorageSizeLabel(bytes) {
+            const kb = (bytes / 1024).toFixed(1);
+            const el = document.getElementById('storage-size-label');
+            if (el) el.textContent = `${kb} KB`;
+        }
+
+        // Navigation Tab Switcher
+        function switchTab(tabName) {
+            currentTab = tabName;
+            ['all', 'resume', 'notes', 'designs', 'works', 'archived'].forEach(t => {
+                const sec = document.getElementById(`section-${t}`);
+                if (sec) sec.classList.toggle('hidden', t !== tabName);
+            });
+
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                const isSelected = btn.getAttribute('data-tab') === tabName;
+                if (isSelected) {
+                    btn.className = 'tab-btn px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition flex items-center gap-2 bg-indigo-600 text-white shadow-xs';
+                } else {
+                    btn.className = 'tab-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition flex items-center gap-2 text-slate-600 hover:bg-slate-200/70';
+                }
+            });
+
+            renderAll();
+        }
+
+        function renderAll() {
+            updateProfileDisplay();
+            updateCounts();
+            renderAllOverview();
+            renderUploadedResumeFiles();
+            renderNotes();
+            renderDesigns();
+            renderWorks();
+            renderArchivedRecords();
+        }
+
+        function updateCounts() {
+            const activeNotes = appData.notes.filter(n => !n.archived);
+            const activeDesigns = appData.designs.filter(d => !d.archived);
+            const activeWorks = appData.works.filter(w => !w.archived);
+            const archivedCount =
+                appData.notes.filter(n => n.archived).length +
+                appData.designs.filter(d => d.archived).length +
+                appData.works.filter(w => w.archived).length +
+                (appData.resumeFiles || []).filter(f => f.archived).length;
+
+            document.getElementById('count-notes').textContent = activeNotes.length;
+            document.getElementById('count-designs').textContent = activeDesigns.length;
+            document.getElementById('count-works').textContent = activeWorks.length;
+            const archEl = document.getElementById('count-archived');
+            if (archEl) archEl.textContent = archivedCount;
+
+            document.getElementById('stat-notes-count').textContent = activeNotes.length;
+            document.getElementById('stat-designs-count').textContent = activeDesigns.length;
+            document.getElementById('stat-works-count').textContent = activeWorks.length;
+            document.getElementById('overview-resume-role').textContent =
+                `${(appData.resumeFiles || []).filter(f => !f.archived).length} PDF(s) + Live Resume`;
+        }
+
+        // ==================== PROFILE MANAGEMENT ====================
+        function updateProfileDisplay() {
+            document.getElementById('display-profile-name').textContent = appData.profile.name || 'Prinsi Chhatrola';
+            document.getElementById('display-profile-bio').textContent = appData.profile.bio || '';
+            document.getElementById('display-profile-contact').textContent = appData.profile.contact || '';
+        }
+
+        function openProfileModal() {
+            document.getElementById('edit-prof-name').value = appData.profile.name || 'Prinsi Chhatrola';
+            document.getElementById('edit-prof-bio').value = appData.profile.bio || '';
+            document.getElementById('edit-prof-contact').value = appData.profile.contact || '';
+            openModal('profile-modal');
+        }
+
+        function saveProfile(e) {
+            e.preventDefault();
+            if (!requireUnlocked()) return;
+            appData.profile.name = document.getElementById('edit-prof-name').value.trim() || 'Prinsi Chhatrola';
+            appData.profile.bio = document.getElementById('edit-prof-bio').value.trim();
+            appData.profile.contact = document.getElementById('edit-prof-contact').value.trim();
+            saveToStorage();
+            updateProfileDisplay();
+            closeModal('profile-modal');
+            showToast('Profile updated!');
+        }
+
+        // ==================== ALL RECORDS OVERVIEW & SEARCH ====================
+        function renderAllOverview() {
+            const container = document.getElementById('all-records-feed');
+            const q = (document.getElementById('global-search').value || '').trim().toLowerCase();
+
+            const activeNotes = appData.notes.filter(n => !n.archived);
+            const activeDesigns = appData.designs.filter(d => !d.archived);
+            const activeWorks = appData.works.filter(w => !w.archived);
+            const activeResumeFiles = (appData.resumeFiles || []).filter(f => !f.archived);
+
+            const matchedNotes = activeNotes.filter(n => !q || (n.title + n.category + n.content).toLowerCase().includes(q));
+            const matchedDesigns = activeDesigns.filter(d => !q || (d.title + d.tool + d.notes).toLowerCase().includes(q));
+            const matchedWorks = activeWorks.filter(w => !q || (w.title + w.status + w.desc + (w.fileName || '')).toLowerCase().includes(q));
+            const matchedResFiles = activeResumeFiles.filter(f => !q || f.name.toLowerCase().includes(q));
+            const resumeMatches = !q || JSON.stringify(appData.resume).toLowerCase().includes(q);
+
+            if (q && !matchedNotes.length && !matchedDesigns.length && !matchedWorks.length && !matchedResFiles.length && !resumeMatches) {
+                container.innerHTML = `
+                    <div class="bg-white border border-slate-200 rounded-2xl p-8 text-center">
+                        <p class="text-base font-bold text-slate-800">No records matched "${escapeHTML(q)}"</p>
+                        <p class="text-xs text-slate-500 mt-1">Try searching with another word or clear the search box.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `<div class="flex items-center justify-between"><h3 class="text-base font-extrabold text-slate-800">${q ? 'Search Results' : 'Recent Saved Records & Uploaded Files'}</h3></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4">`;
+
+            if (resumeMatches) {
+                html += `
+                    <div class="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <span class="px-2 py-0.5 text-[11px] font-bold rounded-md bg-indigo-50 text-indigo-700">Live Resume</span>
+                            <h4 class="font-bold text-sm text-slate-900 mt-1 truncate">${escapeHTML(appData.resume.fullname)} — ${escapeHTML(appData.resume.headline)}</h4>
+                            <p class="text-xs text-slate-500 truncate mt-0.5">${escapeHTML(appData.resume.skills)}</p>
+                        </div>
+                        <button onclick="openResumePreview()" class="px-3 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold shrink-0 hover:bg-indigo-700">PDF Preview</button>
+                    </div>
+                `;
+            }
+
+            matchedResFiles.slice(0, q ? 10 : 2).forEach(rf => {
+                html += `
+                    <div class="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <span class="px-2 py-0.5 text-[11px] font-bold rounded-md bg-cyan-50 text-cyan-800">Uploaded Resume File</span>
+                            <h4 class="font-bold text-sm text-slate-900 mt-1 truncate">${escapeHTML(rf.name)}</h4>
+                            <p class="text-xs text-slate-500 truncate mt-0.5">Uploaded ${escapeHTML(rf.uploadedAt)}</p>
+                        </div>
+                        <button onclick="viewStoredFile('resume', '${rf.id}')" class="px-3 py-2 rounded-xl bg-cyan-600 text-white text-xs font-bold shrink-0 hover:bg-cyan-700">Open File</button>
+                    </div>
+                `;
+            });
+
+            matchedNotes.slice(0, q ? 20 : 3).forEach(n => {
+                html += `
+                    <div class="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <span class="px-2 py-0.5 text-[11px] font-bold rounded-md bg-amber-50 text-amber-700">Note • ${escapeHTML(n.category)}</span>
+                            <h4 class="font-bold text-sm text-slate-900 mt-1 truncate">${escapeHTML(n.title)}</h4>
+                            <p class="text-xs text-slate-500 truncate mt-0.5">${escapeHTML(n.content)}</p>
+                        </div>
+                        <button onclick="switchTab('notes')" class="px-3 py-2 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold shrink-0 hover:bg-slate-100">View</button>
+                    </div>
+                `;
+            });
+
+            matchedDesigns.slice(0, q ? 20 : 2).forEach(d => {
+                html += `
+                    <div class="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <span class="px-2 py-0.5 text-[11px] font-bold rounded-md bg-pink-50 text-pink-700">${escapeHTML(d.tool)}</span>
+                            <h4 class="font-bold text-sm text-slate-900 mt-1 truncate">${escapeHTML(d.title)}</h4>
+                            <p class="text-xs text-slate-500 truncate mt-0.5">${escapeHTML(d.notes || d.link || 'Saved photo / design')}</p>
+                        </div>
+                        <button onclick="switchTab('designs')" class="px-3 py-2 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold shrink-0 hover:bg-slate-100">Open</button>
+                    </div>
+                `;
+            });
+
+            matchedWorks.slice(0, q ? 20 : 2).forEach(w => {
+                html += `
+                    <div class="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <span class="px-2 py-0.5 text-[11px] font-bold rounded-md bg-emerald-50 text-emerald-700">Work • ${escapeHTML(w.status)}</span>
+                            <h4 class="font-bold text-sm text-slate-900 mt-1 truncate">${escapeHTML(w.title)}</h4>
+                            <p class="text-xs text-slate-500 truncate mt-0.5">${escapeHTML(w.fileName ? 'File: ' + w.fileName : w.desc)}</p>
+                        </div>
+                        <button onclick="switchTab('works')" class="px-3 py-2 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold shrink-0 hover:bg-slate-100">Open</button>
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        // ==================== TAB 1: RESUME & DEVICE PDF UPLOAD LOGIC ====================
+        function handleResumeFileUpload(event) {
+            if (!requireUnlocked()) {
+                event.target.value = '';
+                return;
+            }
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const dataUrl = e.target.result;
+                const fileId = 'resfile_' + Date.now();
+                await saveBinaryFileLocal(fileId, dataUrl);
+
+                // Keep inline dataUrl if <= 750KB so it syncs cleanly across phone & laptop
+                const inlineData = dataUrl.length <= 750000 ? dataUrl : '';
+
+                appData.resumeFiles = appData.resumeFiles || [];
+                appData.resumeFiles.unshift({
+                    id: fileId,
+                    name: file.name,
+                    type: file.type || 'application/pdf',
+                    sizeKB: Math.max(1, Math.round(file.size / 1024)),
+                    fileData: inlineData,
+                    archived: false,
+                    uploadedAt: new Date().toISOString().slice(0, 10)
+                });
+
+                saveToStorage();
+                renderAll();
+                showToast(`Resume file "${file.name}" saved permanently!`);
+                event.target.value = '';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function renderUploadedResumeFiles() {
+            const list = document.getElementById('uploaded-resumes-list');
+            if (!list) return;
+            const activeFiles = (appData.resumeFiles || []).filter(f => !f.archived);
+
+            if (!activeFiles.length) {
+                list.innerHTML = `
+                    <div class="col-span-full p-4 rounded-xl bg-slate-50 border border-dashed border-slate-300 text-center text-xs text-slate-500">
+                        No PDF or document resume uploaded yet. Click <strong>"Upload Resume PDF / File"</strong> above to save your resume file from phone or laptop.
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = activeFiles.map(f => `
+                <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-sm font-bold text-slate-900 truncate">${escapeHTML(f.name)}</p>
+                        <p class="text-[11px] text-slate-500">${f.sizeKB || 0} KB • Saved ${escapeHTML(f.uploadedAt)}</p>
+                    </div>
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        <button onclick="viewStoredFile('resume', '${f.id}')" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold">View / Download</button>
+                        <button onclick="archiveRecord('resumeFile', '${f.id}')" class="px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-200 text-slate-700 text-xs font-bold" title="Move to Safe Archive (Never Deleted)">Archive</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function populateResumeForm() {
+            const r = appData.resume;
+            document.getElementById('res-fullname').value = r.fullname || 'Prinsi Chhatrola';
+            document.getElementById('res-headline').value = r.headline || '';
+            document.getElementById('res-email').value = r.email || '';
+            document.getElementById('res-phone').value = r.phone || '';
+            document.getElementById('res-location').value = r.location || '';
+            document.getElementById('res-summary').value = r.summary || '';
+            document.getElementById('res-skills').value = r.skills || '';
+            document.getElementById('res-education').value = r.education || '';
+            document.getElementById('res-experience').value = r.experience || '';
+            document.getElementById('res-links').value = r.links || '';
+            renderResumeSkillPills();
+        }
+
+        function autoSaveResume() {
+            if (vaultLockState.locked) {
+                populateResumeForm();
+                showToast('Vault is Locked (Read-Only). Unlock with PIN to edit.', 'error');
+                return;
+            }
+            appData.resume = {
+                fullname: document.getElementById('res-fullname').value.trim() || 'Prinsi Chhatrola',
+                headline: document.getElementById('res-headline').value.trim(),
+                email: document.getElementById('res-email').value.trim(),
+                phone: document.getElementById('res-phone').value.trim(),
+                location: document.getElementById('res-location').value.trim(),
+                summary: document.getElementById('res-summary').value,
+                skills: document.getElementById('res-skills').value,
+                education: document.getElementById('res-education').value,
+                experience: document.getElementById('res-experience').value,
+                links: document.getElementById('res-links').value.trim()
+            };
+            renderResumeSkillPills();
+            updateCounts();
+            saveToStorage(true);
+        }
+
+        function renderResumeSkillPills() {
+            const skills = (document.getElementById('res-skills').value || '').split(',').map(s => s.trim()).filter(Boolean);
+            document.getElementById('res-skills-preview').innerHTML = skills.map(s =>
+                `<span class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-semibold">${escapeHTML(s)}</span>`
+            ).join('');
+        }
+
+        function openResumePreview() {
+            const r = appData.resume;
+            const skills = (r.skills || '').split(',').map(s => s.trim()).filter(Boolean);
+            const eduLines = (r.education || '').split('\n').filter(Boolean);
+            const expLines = (r.experience || '').split('\n').filter(Boolean);
+            const contactItems = [r.email, r.phone, r.location].filter(Boolean).join('  •  ');
+
+            document.getElementById('resume-print-sheet').innerHTML = `
+                <div class="border-b-2 border-slate-900 pb-4">
+                    <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">${escapeHTML(r.fullname || 'Prinsi Chhatrola')}</h1>
+                    ${r.headline ? `<p class="text-base font-bold text-indigo-700 mt-0.5">${escapeHTML(r.headline)}</p>` : ''}
+                    ${contactItems ? `<p class="text-xs text-slate-600 mt-1.5">${escapeHTML(contactItems)}</p>` : ''}
+                    ${r.links ? `<p class="text-xs font-semibold text-slate-700 mt-1">${escapeHTML(r.links)}</p>` : ''}
+                </div>
+
+                ${r.summary ? `
+                <div>
+                    <h2 class="text-xs font-extrabold uppercase tracking-widest text-slate-500 border-b border-slate-200 pb-1 mb-2">Career Objective & Summary</h2>
+                    <p class="text-sm text-slate-800 leading-relaxed whitespace-pre-line">${escapeHTML(r.summary)}</p>
+                </div>` : ''}
+
+                ${skills.length ? `
+                <div>
+                    <h2 class="text-xs font-extrabold uppercase tracking-widest text-slate-500 border-b border-slate-200 pb-1 mb-2">Skills</h2>
+                    <div class="flex flex-wrap gap-1.5">
+                        ${skills.map(s => `<span class="px-2.5 py-1 text-xs font-semibold bg-slate-100 text-slate-800 rounded-md border border-slate-200">${escapeHTML(s)}</span>`).join('')}
+                    </div>
+                </div>` : ''}
+
+                ${eduLines.length ? `
+                <div>
+                    <h2 class="text-xs font-extrabold uppercase tracking-widest text-slate-500 border-b border-slate-200 pb-1 mb-2">Education</h2>
+                    <div class="space-y-1.5 text-sm text-slate-800 leading-relaxed">
+                        ${eduLines.map(line => `<p>${escapeHTML(line)}</p>`).join('')}
+                    </div>
+                </div>` : ''}
+
+                ${expLines.length ? `
+                <div>
+                    <h2 class="text-xs font-extrabold uppercase tracking-widest text-slate-500 border-b border-slate-200 pb-1 mb-2">Experience & Projects</h2>
+                    <div class="space-y-1.5 text-sm text-slate-800 leading-relaxed">
+                        ${expLines.map(line => `<p>${escapeHTML(line)}</p>`).join('')}
+                    </div>
+                </div>` : ''}
+            `;
+
+            openModal('resume-print-modal');
+        }
+
+        // ==================== TAB 2: NOTES LOGIC ====================
+        function renderNotes() {
+            const grid = document.getElementById('notes-grid');
+            const query = (document.getElementById('notes-search').value || '').trim().toLowerCase();
+            const catFilter = document.getElementById('notes-filter-cat').value;
+
+            const filtered = appData.notes.filter(n => {
+                if (n.archived) return false;
+                const matchesCat = catFilter === 'All' || n.category === catFilter;
+                const matchesQuery = !query || (n.title + n.content).toLowerCase().includes(query);
+                return matchesCat && matchesQuery;
+            });
+
+            if (!filtered.length) {
+                grid.innerHTML = `
+                    <div class="col-span-full bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
+                        <p class="text-base font-bold text-slate-800">No notes found</p>
+                        <p class="text-xs text-slate-500 mt-1 mb-4">Click "Add New Note" to save your personal, study, or work notes.</p>
+                        <button onclick="requireUnlocked(() => openNoteModal())" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold">+ Add New Note</button>
+                    </div>
+                `;
+                return;
+            }
+
+            const badgeColors = {
+                Personal: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+                Study: 'bg-sky-50 text-sky-700 border-sky-200',
+                Work: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                Important: 'bg-amber-50 text-amber-800 border-amber-200'
+            };
+
+            grid.innerHTML = filtered.map(note => {
+                const badge = badgeColors[note.category] || badgeColors.Personal;
+                return `
+                    <div class="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col justify-between shadow-2xs hover:shadow-sm transition">
+                        <div>
+                            <div class="flex items-center justify-between gap-2 mb-2.5">
+                                <span class="px-2.5 py-0.5 text-xs font-bold rounded-lg border ${badge}">${escapeHTML(note.category)}</span>
+                                <span class="text-[11px] text-slate-400">${escapeHTML(note.updatedAt || '')}</span>
+                            </div>
+                            <h3 class="text-base font-extrabold text-slate-900">${escapeHTML(note.title)}</h3>
+                            <div class="mt-2.5 p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs sm:text-sm text-slate-700 whitespace-pre-wrap leading-relaxed max-h-44 overflow-y-auto">${escapeHTML(note.content)}</div>
+                        </div>
+
+                        <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between gap-2">
+                            <button onclick="copyNoteText('${note.id}')" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition">
+                                Copy Text
+                            </button>
+                            <div class="flex items-center gap-1.5">
+                                <button onclick="requireUnlocked(() => editNote('${note.id}'))" class="px-3 py-1.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold transition">Edit</button>
+                                <button onclick="archiveRecord('note', '${note.id}')" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition" title="Move to Safe Archive (Never Deleted)">Archive</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openNoteModal(note = null) {
+            document.getElementById('note-id').value = note ? note.id : '';
+            document.getElementById('note-title').value = note ? note.title : '';
+            document.getElementById('note-category').value = note ? note.category : 'Personal';
+            document.getElementById('note-content').value = note ? note.content : '';
+            document.getElementById('note-modal-heading').textContent = note ? 'Edit Note' : 'Add New Note';
+            openModal('note-modal');
+        }
+
+        function saveNote(e) {
+            e.preventDefault();
+            if (!requireUnlocked()) return;
+            const id = document.getElementById('note-id').value;
+            const item = {
+                id: id || 'note_' + Date.now(),
+                title: document.getElementById('note-title').value.trim(),
+                category: document.getElementById('note-category').value,
+                content: document.getElementById('note-content').value.trim(),
+                archived: false,
+                updatedAt: new Date().toISOString().slice(0, 10)
+            };
+
+            if (id) {
+                const idx = appData.notes.findIndex(n => n.id === id);
+                if (idx !== -1) appData.notes[idx] = item;
+                showToast('Note updated!');
+            } else {
+                appData.notes.unshift(item);
+                showToast('Note saved permanently!');
+            }
+
+            saveToStorage();
+            closeModal('note-modal');
+            renderAll();
+        }
+
+        function editNote(id) {
+            const note = appData.notes.find(n => n.id === id);
+            if (note) openNoteModal(note);
+        }
+
+        function copyNoteText(id) {
+            const note = appData.notes.find(n => n.id === id);
+            if (!note) return;
+            const textarea = document.createElement('textarea');
+            textarea.value = `${note.title}\n\n${note.content}`;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast('Note text copied to clipboard!');
+            } catch (err) {
+                showToast('Could not copy text.', 'error');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        // ==================== TAB 3: DESIGNS & PHOTOS LOGIC ====================
+        function setDesignFilter(tool) {
+            designFilter = tool;
+            document.querySelectorAll('.dtool-btn').forEach(btn => {
+                const active = btn.getAttribute('data-dtool') === tool;
+                btn.className = active
+                    ? 'dtool-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white'
+                    : 'dtool-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-300 text-slate-700 hover:bg-slate-100';
+            });
+            renderDesigns();
+        }
+
+        function renderDesigns() {
+            const grid = document.getElementById('designs-grid');
+            const activeDesigns = appData.designs.filter(d => !d.archived);
+            const filtered = designFilter === 'All'
+                ? activeDesigns
+                : activeDesigns.filter(d => d.tool === designFilter);
+
+            if (!filtered.length) {
+                grid.innerHTML = `
+                    <div class="col-span-full bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
+                        <p class="text-base font-bold text-slate-800">No design or photo records found</p>
+                        <p class="text-xs text-slate-500 mt-1 mb-4">Upload photos from your phone/laptop or save Canva links here.</p>
+                        <button onclick="requireUnlocked(() => openDesignModal())" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold">+ Add Design / Photo</button>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(des => `
+                <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden flex flex-col justify-between shadow-2xs hover:shadow-sm transition">
+                    <div>
+                        ${des.imageData ? `
+                            <div onclick="viewStoredFile('design', '${des.id}')" class="h-44 bg-slate-100 border-b border-slate-100 overflow-hidden cursor-pointer relative group">
+                                <img src="${des.imageData}" alt="${escapeHTML(des.title)}" class="w-full h-full object-cover group-hover:scale-105 transition">
+                                <span class="absolute bottom-2 right-2 px-2 py-1 rounded-lg bg-slate-900/75 text-white text-[10px] font-bold">Tap to View Full</span>
+                            </div>
+                        ` : `
+                            <div class="h-32 bg-gradient-to-br from-indigo-50 via-pink-50 to-amber-50 border-b border-slate-100 flex flex-col items-center justify-center p-4 text-center">
+                                <span class="px-3 py-1 rounded-full bg-white border border-slate-200 text-xs font-extrabold text-indigo-700 shadow-2xs">${escapeHTML(des.tool)} Design</span>
+                            </div>
+                        `}
+                        <div class="p-4">
+                            <div class="flex items-center justify-between gap-2 mb-1">
+                                <span class="px-2 py-0.5 text-[11px] font-bold rounded-md bg-pink-50 text-pink-700">${escapeHTML(des.tool)}</span>
+                                <span class="text-[11px] text-slate-400">${escapeHTML(des.updatedAt || '')}</span>
+                            </div>
+                            <h3 class="text-base font-extrabold text-slate-900 mt-1">${escapeHTML(des.title)}</h3>
+                            <p class="text-xs text-slate-600 mt-1.5 leading-relaxed">${escapeHTML(des.notes || 'Saved permanently in PrinsiVault.')}</p>
+                        </div>
+                    </div>
+
+                    <div class="px-4 pb-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                        ${des.link ? `
+                            <a href="${escapeHTML(des.link)}" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition">
+                                Open Link ↗
+                            </a>
+                        ` : (des.imageData ? `
+                            <button onclick="viewStoredFile('design', '${des.id}')" class="px-3 py-1.5 rounded-xl bg-pink-50 hover:bg-pink-100 text-pink-700 text-xs font-bold transition">
+                                View / Save Photo
+                            </button>
+                        ` : `<span class="text-xs text-slate-400">Saved locally</span>`)}
+
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="requireUnlocked(() => editDesign('${des.id}'))" class="px-3 py-1.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold transition">Edit</button>
+                            <button onclick="archiveRecord('design', '${des.id}')" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition" title="Move to Safe Archive (Never Deleted)">Archive</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function handleMultiPhotoUpload(event) {
+            if (!requireUnlocked()) {
+                event.target.value = '';
+                return;
+            }
+            const files = Array.from(event.target.files || []);
+            if (!files.length) return;
+
+            let processed = 0;
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const MAX_W = 800;
+                        const scale = Math.min(1, MAX_W / img.width);
+                        canvas.width = Math.round(img.width * scale);
+                        canvas.height = Math.round(img.height * scale);
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        const compressed = canvas.toDataURL('image/jpeg', 0.78);
+
+                        appData.designs.unshift({
+                            id: 'des_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+                            title: file.name.replace(/\.[^/.]+$/, ''),
+                            tool: 'Photo',
+                            link: '',
+                            imageData: compressed,
+                            archived: false,
+                            notes: `Uploaded photo (${file.name})`,
+                            updatedAt: new Date().toISOString().slice(0, 10)
+                        });
+
+                        processed++;
+                        if (processed === files.length) {
+                            saveToStorage();
+                            renderAll();
+                            showToast(`Saved ${files.length} photo(s) permanently!`);
+                        }
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+            event.target.value = '';
+        }
+
+        function openDesignModal(des = null) {
+            document.getElementById('design-id').value = des ? des.id : '';
+            document.getElementById('design-title').value = des ? des.title : '';
+            document.getElementById('design-tool').value = des ? des.tool : 'Photo';
+            document.getElementById('design-link').value = des ? des.link : '';
+            document.getElementById('design-notes').value = des ? des.notes : '';
+            document.getElementById('design-image-data').value = des ? (des.imageData || '') : '';
+            document.getElementById('design-modal-heading').textContent = des ? 'Edit Design' : 'Add Design Work';
+
+            const box = document.getElementById('design-preview-box');
+            const img = document.getElementById('design-preview-img');
+            if (des && des.imageData) {
+                img.src = des.imageData;
+                box.classList.remove('hidden');
+            } else {
+                box.classList.add('hidden');
+            }
+            openModal('design-modal');
+        }
+
+        // Compress Image via HTML5 Canvas (Max 600px width, JPEG 0.7) for Quota Safety
+        function compressDesignImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX_W = 600;
+                    const scale = Math.min(1, MAX_W / img.width);
+                    canvas.width = Math.round(img.width * scale);
+                    canvas.height = Math.round(img.height * scale);
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    const compressed = canvas.toDataURL('image/jpeg', 0.7);
+                    document.getElementById('design-image-data').value = compressed;
+                    document.getElementById('design-preview-img').src = compressed;
+                    document.getElementById('design-preview-box').classList.remove('hidden');
+                    showToast('Image compressed & ready!');
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearDesignImage() {
+            document.getElementById('design-image-data').value = '';
+            document.getElementById('design-preview-box').classList.add('hidden');
+        }
+
+        function saveDesign(e) {
+            e.preventDefault();
+            if (!requireUnlocked()) return;
+            const id = document.getElementById('design-id').value;
+            const item = {
+                id: id || 'des_' + Date.now(),
+                title: document.getElementById('design-title').value.trim(),
+                tool: document.getElementById('design-tool').value,
+                link: document.getElementById('design-link').value.trim(),
+                imageData: document.getElementById('design-image-data').value,
+                notes: document.getElementById('design-notes').value.trim(),
+                archived: false,
+                updatedAt: new Date().toISOString().slice(0, 10)
+            };
+
+            if (id) {
+                const idx = appData.designs.findIndex(d => d.id === id);
+                if (idx !== -1) appData.designs[idx] = item;
+            } else {
+                appData.designs.unshift(item);
+            }
+
+            if (saveToStorage()) {
+                closeModal('design-modal');
+                renderAll();
+                showToast(id ? 'Design updated!' : 'Design / Photo saved permanently!');
+            }
+        }
+
+        function editDesign(id) {
+            const des = appData.designs.find(d => d.id === id);
+            if (des) openDesignModal(des);
+        }
+
+        // ==================== TAB 4: WORKS, PROJECTS & DEVICE FILES LOGIC ====================
+        function setWorkStatusFilter(status) {
+            workStatusFilter = status;
+            document.querySelectorAll('.wstatus-btn').forEach(btn => {
+                const active = btn.getAttribute('data-wstatus') === status;
+                btn.className = active
+                    ? 'wstatus-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white'
+                    : 'wstatus-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-300 text-slate-700 hover:bg-slate-100';
+            });
+            renderWorks();
+        }
+
+        function renderWorks() {
+            const grid = document.getElementById('works-grid');
+            const activeWorks = appData.works.filter(w => !w.archived);
+            const filtered = workStatusFilter === 'All'
+                ? activeWorks
+                : workStatusFilter === 'HasFile'
+                    ? activeWorks.filter(w => !!w.fileName)
+                    : activeWorks.filter(w => w.status === workStatusFilter);
+
+            if (!filtered.length) {
+                grid.innerHTML = `
+                    <div class="col-span-full bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
+                        <p class="text-base font-bold text-slate-800">No work or file records found</p>
+                        <p class="text-xs text-slate-500 mt-1 mb-4">Upload your work PDFs, documents, or add project milestones here.</p>
+                        <button onclick="requireUnlocked(() => openWorkModal())" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold">+ Add Work / File</button>
+                    </div>
+                `;
+                return;
+            }
+
+            const statusColors = {
+                'Completed': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                'In Progress': 'bg-indigo-50 text-indigo-700 border-indigo-200',
+                'Planned': 'bg-amber-50 text-amber-800 border-amber-200'
+            };
+
+            grid.innerHTML = filtered.map(work => {
+                const badge = statusColors[work.status] || statusColors['Completed'];
+                const isUrl = work.link && (work.link.startsWith('http://') || work.link.startsWith('https://'));
+                return `
+                    <div class="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col justify-between shadow-2xs hover:shadow-sm transition">
+                        <div>
+                            <div class="flex items-center justify-between gap-2 mb-2.5">
+                                <span class="px-2.5 py-0.5 text-xs font-bold rounded-full border ${badge}">${escapeHTML(work.status)}</span>
+                                <span class="text-xs text-slate-400">${escapeHTML(work.date || '')}</span>
+                            </div>
+                            <h3 class="text-base font-extrabold text-slate-900">${escapeHTML(work.title)}</h3>
+                            <p class="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed">${escapeHTML(work.desc)}</p>
+
+                            ${work.fileName ? `
+                                <div class="mt-3 p-2.5 rounded-xl bg-indigo-50/80 border border-indigo-200 flex items-center justify-between gap-2">
+                                    <span class="text-xs font-bold text-indigo-900 truncate">File: ${escapeHTML(work.fileName)}</span>
+                                    <button onclick="viewStoredFile('work', '${work.id}')" class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold shrink-0">View / Download</button>
+                                </div>
+                            ` : ''}
+
+                            ${work.link ? `
+                                <div class="mt-3 text-xs font-semibold text-indigo-600 truncate">
+                                    ${isUrl ? `<a href="${escapeHTML(work.link)}" target="_blank" rel="noopener noreferrer" class="hover:underline">Link: ${escapeHTML(work.link)} ↗</a>` : `Ref: ${escapeHTML(work.link)}`}
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-end gap-1.5">
+                            <button onclick="requireUnlocked(() => editWork('${work.id}'))" class="px-3 py-1.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold transition">Edit</button>
+                            <button onclick="archiveRecord('work', '${work.id}')" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition" title="Move to Safe Archive (Never Deleted)">Archive</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function handleQuickWorkFilesUpload(event) {
+            if (!requireUnlocked()) {
+                event.target.value = '';
+                return;
+            }
+            const files = Array.from(event.target.files || []);
+            if (!files.length) return;
+
+            let count = 0;
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    const dataUrl = e.target.result;
+                    const workId = 'work_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+                    await saveBinaryFileLocal(workId, dataUrl);
+                    const inlineData = dataUrl.length <= 750000 ? dataUrl : '';
+
+                    appData.works.unshift({
+                        id: workId,
+                        title: file.name.replace(/\.[^/.]+$/, ''),
+                        status: 'Completed',
+                        archived: false,
+                        date: new Date().toISOString().slice(0, 10),
+                        link: '',
+                        fileName: file.name,
+                        fileType: file.type || 'application/octet-stream',
+                        fileData: inlineData,
+                        desc: `Uploaded work document (${file.name}, ${Math.max(1, Math.round(file.size / 1024))} KB).`
+                    });
+
+                    count++;
+                    if (count === files.length) {
+                        saveToStorage();
+                        renderAll();
+                        showToast(`Uploaded ${files.length} work file(s) permanently!`);
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+            event.target.value = '';
+        }
+
+        function handleWorkModalFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('work-file-data').value = e.target.result;
+                document.getElementById('work-file-name').value = file.name;
+                document.getElementById('work-file-type').value = file.type || 'application/octet-stream';
+                document.getElementById('work-file-badge-text').textContent = `${file.name} (${Math.max(1, Math.round(file.size / 1024))} KB)`;
+                document.getElementById('work-file-badge').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearWorkModalFile() {
+            document.getElementById('work-file-data').value = '';
+            document.getElementById('work-file-name').value = '';
+            document.getElementById('work-file-type').value = '';
+            document.getElementById('work-file-badge').classList.add('hidden');
+            const inp = document.getElementById('work-file-input');
+            if (inp) inp.value = '';
+        }
+
+        function openWorkModal(work = null) {
+            document.getElementById('work-id').value = work ? work.id : '';
+            document.getElementById('work-title').value = work ? work.title : '';
+            document.getElementById('work-status').value = work ? work.status : 'Completed';
+            document.getElementById('work-date').value = work ? (work.date || '') : new Date().toISOString().slice(0, 10);
+            document.getElementById('work-link').value = work ? (work.link || '') : '';
+            document.getElementById('work-desc').value = work ? work.desc : '';
+            document.getElementById('work-modal-heading').textContent = work ? 'Edit Work / Project' : 'Add Work / Project';
+
+            if (work && work.fileName) {
+                document.getElementById('work-file-data').value = work.fileData || '';
+                document.getElementById('work-file-name').value = work.fileName || '';
+                document.getElementById('work-file-type').value = work.fileType || '';
+                document.getElementById('work-file-badge-text').textContent = work.fileName;
+                document.getElementById('work-file-badge').classList.remove('hidden');
+            } else {
+                clearWorkModalFile();
+            }
+
+            openModal('work-modal');
+        }
+
+        async function saveWork(e) {
+            e.preventDefault();
+            if (!requireUnlocked()) return;
+            const id = document.getElementById('work-id').value || ('work_' + Date.now());
+            const rawFileData = document.getElementById('work-file-data').value;
+            const fileName = document.getElementById('work-file-name').value;
+            const fileType = document.getElementById('work-file-type').value;
+
+            if (rawFileData) {
+                await saveBinaryFileLocal(id, rawFileData);
+            }
+
+            const inlineFileData = rawFileData && rawFileData.length <= 750000 ? rawFileData : '';
+
+            const item = {
+                id,
+                title: document.getElementById('work-title').value.trim(),
+                status: document.getElementById('work-status').value,
+                archived: false,
+                date: document.getElementById('work-date').value,
+                link: document.getElementById('work-link').value.trim(),
+                fileName,
+                fileType,
+                fileData: inlineFileData,
+                desc: document.getElementById('work-desc').value.trim()
+            };
+
+            const existingIdx = appData.works.findIndex(w => w.id === id);
+            if (existingIdx !== -1) {
+                appData.works[existingIdx] = item;
+                showToast('Work record updated!');
+            } else {
+                appData.works.unshift(item);
+                showToast('Work record saved permanently!');
+            }
+
+            saveToStorage();
+            closeModal('work-modal');
+            renderAll();
+        }
+
+        function editWork(id) {
+            const work = appData.works.find(w => w.id === id);
+            if (work) openWorkModal(work);
+        }
+
+        // ==================== NO-DELETE SAFE ARCHIVE & RESTORE ====================
+        function archiveRecord(kind, id) {
+            if (!requireUnlocked()) return;
+            openConfirm(
+                'Move to Safe Archive?',
+                'PrinsiVault never deletes records. This item will be hidden from the main list and safely preserved in your "Safe Archive" tab so you can restore it anytime.',
+                () => {
+                    if (kind === 'note') {
+                        const item = appData.notes.find(x => x.id === id);
+                        if (item) item.archived = true;
+                    } else if (kind === 'design') {
+                        const item = appData.designs.find(x => x.id === id);
+                        if (item) item.archived = true;
+                    } else if (kind === 'work') {
+                        const item = appData.works.find(x => x.id === id);
+                        if (item) item.archived = true;
+                    } else if (kind === 'resumeFile') {
+                        const item = (appData.resumeFiles || []).find(x => x.id === id);
+                        if (item) item.archived = true;
+                    }
+                    saveToStorage();
+                    renderAll();
+                    showToast('Moved to Safe Archive (Record preserved!).');
+                }
+            );
+        }
+
+        function restoreArchivedRecord(kind, id) {
+            if (!requireUnlocked()) return;
+            if (kind === 'note') {
+                const item = appData.notes.find(x => x.id === id);
+                if (item) item.archived = false;
+            } else if (kind === 'design') {
+                const item = appData.designs.find(x => x.id === id);
+                if (item) item.archived = false;
+            } else if (kind === 'work') {
+                const item = appData.works.find(x => x.id === id);
+                if (item) item.archived = false;
+            } else if (kind === 'resumeFile') {
+                const item = (appData.resumeFiles || []).find(x => x.id === id);
+                if (item) item.archived = false;
+            }
+            saveToStorage();
+            renderAll();
+            showToast('Record restored to active view!');
+        }
+
+        function renderArchivedRecords() {
+            const grid = document.getElementById('archived-grid');
+            if (!grid) return;
+
+            const items = [
+                ...(appData.resumeFiles || []).filter(f => f.archived).map(f => ({ kind: 'resumeFile', label: 'Resume File', id: f.id, title: f.name, sub: f.uploadedAt })),
+                ...appData.notes.filter(n => n.archived).map(n => ({ kind: 'note', label: 'Note', id: n.id, title: n.title, sub: n.content })),
+                ...appData.designs.filter(d => d.archived).map(d => ({ kind: 'design', label: 'Design / Photo', id: d.id, title: d.title, sub: d.notes || d.tool })),
+                ...appData.works.filter(w => w.archived).map(w => ({ kind: 'work', label: 'Work / Project', id: w.id, title: w.title, sub: w.desc }))
+            ];
+
+            if (!items.length) {
+                grid.innerHTML = `
+                    <div class="col-span-full bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
+                        <p class="text-base font-bold text-slate-800">No archived records right now</p>
+                        <p class="text-xs text-slate-500 mt-1">Whenever you archive a note, design, photo, or work record, it stays safely stored here forever.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = items.map(item => `
+                <div class="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col justify-between gap-4">
+                    <div>
+                        <span class="px-2.5 py-0.5 text-xs font-bold rounded-lg bg-slate-100 text-slate-700">${escapeHTML(item.label)}</span>
+                        <h3 class="text-base font-extrabold text-slate-900 mt-2">${escapeHTML(item.title)}</h3>
+                        <p class="text-xs text-slate-500 mt-1 line-clamp-2">${escapeHTML(item.sub || '')}</p>
+                    </div>
+                    <button onclick="restoreArchivedRecord('${item.kind}', '${item.id}')" class="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition">
+                        Restore to Active Tab
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // ==================== BUILT-IN FILE / PDF / PHOTO VIEWER ====================
+        async function viewStoredFile(kind, id) {
+            let title = 'Document Preview';
+            let meta = '';
+            let dataUrl = '';
+            let fileName = 'PrinsiVault_File';
+
+            if (kind === 'resume') {
+                const rf = (appData.resumeFiles || []).find(x => x.id === id);
+                if (!rf) return;
+                title = rf.name;
+                fileName = rf.name;
+                meta = `Resume File • ${rf.sizeKB || 0} KB`;
+                dataUrl = rf.fileData || await getBinaryFileLocal(id);
+            } else if (kind === 'design') {
+                const des = appData.designs.find(x => x.id === id);
+                if (!des) return;
+                title = des.title;
+                fileName = `${des.title.replace(/\s+/g, '_')}.jpg`;
+                meta = `${des.tool} • Saved ${des.updatedAt}`;
+                dataUrl = des.imageData;
+            } else if (kind === 'work') {
+                const w = appData.works.find(x => x.id === id);
+                if (!w) return;
+                title = w.fileName || w.title;
+                fileName = w.fileName || `${w.title.replace(/\s+/g, '_')}.pdf`;
+                meta = `Work Attachment • ${w.status}`;
+                dataUrl = w.fileData || await getBinaryFileLocal(id);
+            }
+
+            if (!dataUrl) {
+                showToast('This large file is stored on the original device where it was uploaded.', 'error');
+                return;
+            }
+
+            document.getElementById('viewer-file-title').textContent = title;
+            document.getElementById('viewer-file-meta').textContent = meta;
+
+            const dlBtn = document.getElementById('viewer-download-btn');
+            dlBtn.href = dataUrl;
+            dlBtn.setAttribute('download', fileName);
+
+            const body = document.getElementById('viewer-body');
+            if (dataUrl.startsWith('data:image/')) {
+                body.innerHTML = `<img src="${dataUrl}" alt="${escapeHTML(title)}" class="max-h-[75vh] max-w-full rounded-xl shadow-md object-contain">`;
+            } else if (dataUrl.startsWith('data:application/pdf')) {
+                body.innerHTML = `<iframe src="${dataUrl}" class="w-full h-[72vh] rounded-xl border border-slate-300 bg-white"></iframe>`;
+            } else {
+                body.innerHTML = `
+                    <div class="bg-white p-8 rounded-2xl text-center max-w-md space-y-3 shadow-sm">
+                        <p class="text-base font-extrabold text-slate-900">${escapeHTML(title)}</p>
+                        <p class="text-xs text-slate-500">Click "Download File" above to open this document on your device.</p>
+                    </div>
+                `;
+            }
+
+            openModal('file-viewer-modal');
+        }
+
+        // ==================== 1-CLICK JSON BACKUP & RESTORE ====================
+        function downloadBackupJSON() {
+            const dateStr = new Date().toISOString().slice(0, 10);
+            const backupObj = {
+                vault: 'PrinsiVault',
+                owner: 'Prinsi Chhatrola',
+                exportedAt: new Date().toISOString(),
+                data: appData
+            };
+            const blob = new Blob([JSON.stringify(backupObj, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Prinsi_Chhatrola_Backup_${dateStr}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast(`Downloaded Prinsi_Chhatrola_Backup_${dateStr}.json`);
+        }
+
+        function handleRestoreBackup(event) {
+            if (!requireUnlocked()) {
+                event.target.value = '';
+                return;
+            }
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    const restored = parsed.data ? parsed.data : parsed;
+
+                    if (!restored.resume && !restored.notes && !restored.designs && !restored.works) {
+                        throw new Error('Invalid backup format');
+                    }
+
+                    openConfirm(
+                        'Merge & Restore Backup File?',
+                        `Safely merge and restore records from "${file.name}" into your vault?`,
+                        () => {
+                            appData = normalizeAppData(restored);
+                            saveToStorage(true);
+                            populateResumeForm();
+                            renderAll();
+                            showToast('All records restored safely from backup!');
+                        }
+                    );
+                } catch (err) {
+                    showToast('Invalid backup file. Please choose a valid PrinsiVault .json file.', 'error');
+                }
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        // ==================== UI HELPERS ====================
+        function openModal(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.classList.remove('hidden');
+                el.classList.add('flex');
+            }
+        }
+
+        function closeModal(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.classList.add('hidden');
+                el.classList.remove('flex');
+            }
+        }
+
+        function openConfirm(title, message, onYes) {
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-message').textContent = message;
+            const modal = document.getElementById('confirm-modal');
+            const okBtn = document.getElementById('confirm-ok-btn');
+            const cancelBtn = document.getElementById('confirm-cancel-btn');
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            const close = () => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                okBtn.onclick = null;
+                cancelBtn.onclick = null;
+            };
+
+            cancelBtn.onclick = close;
+            okBtn.onclick = () => {
+                close();
+                onYes();
+            };
+        }
+
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const el = document.createElement('div');
+            const style = type === 'error'
+                ? 'bg-rose-600 text-white'
+                : 'bg-slate-900 text-white';
+
+            el.className = `${style} px-4 py-3 rounded-xl shadow-lg text-xs sm:text-sm font-bold flex items-center gap-2 fade-in pointer-events-auto`;
+            el.innerHTML = `<span>${type === 'error' ? '⚠' : '✓'}</span><span>${escapeHTML(msg)}</span>`;
+            container.appendChild(el);
+
+            setTimeout(() => {
+                el.style.opacity = '0';
+                el.style.transition = 'opacity 0.25s ease';
+                setTimeout(() => el.remove(), 250);
+            }, 3000);
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+    </script>
+</body>
+</html>
