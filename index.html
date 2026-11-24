@@ -68,11 +68,15 @@
             color: #0f172a;
         }
         .fade-in {
-            animation: fadeIn 0.18s ease-out;
+            animation: fadeIn 0.14s ease-out;
         }
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(4px); }
+            from { opacity: 0; transform: translateY(3px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+        /* Instant tap response on mobile devices */
+        button, a, label {
+            touch-action: manipulation;
         }
 
         /* Print Styles for Prinsi Chhatrola's Clean A4 Resume PDF */
@@ -314,8 +318,12 @@
                         </div>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 self-start sm:self-center shrink-0">
+                        <button onclick="openInstallAppModal()" id="install-app-btn" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white text-xs sm:text-sm font-bold shadow-xs transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3"/></svg>
+                            <span>Install App</span>
+                        </button>
                         <button onclick="openSyncModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs sm:text-sm font-semibold transition">
-                            <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3"/></svg>
+                            <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
                             <span>Phone & Laptop Sync</span>
                         </button>
                         <button onclick="downloadAppIconPNG()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-cyan-200 bg-cyan-50/70 hover:bg-cyan-100/80 text-cyan-900 text-xs sm:text-sm font-semibold transition">
@@ -640,6 +648,49 @@
     </main>
 
     <!-- ==================== MODALS ==================== -->
+
+    <!-- Fast Mobile App Install & Performance Fix Modal -->
+    <div id="install-app-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl fade-in space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900">Install PrinsiVault on Phone (Fast Launch)</h3>
+                        <p class="text-xs text-slate-500">Fixes icon not opening & phone lag</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('install-app-modal')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100">✕</button>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-950 space-y-1.5">
+                <p class="font-bold">Why did the old icon fail to open or slow down your phone?</p>
+                <p>If an app is installed from an expiring preview link or temporary blob URL, tapping the home-screen icon later cannot find the page and hangs the phone. Installing from a permanent web link (HTTPS) fixes this completely.</p>
+            </div>
+
+            <div id="native-install-box" class="hidden p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between gap-3">
+                <div class="text-xs text-emerald-950">
+                    <p class="font-bold">1-Tap Direct Install Ready!</p>
+                    <p>Install PrinsiVault directly with zero lag.</p>
+                </div>
+                <button onclick="triggerNativeInstall()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shrink-0">Install Now</button>
+            </div>
+
+            <div class="space-y-2.5 text-xs text-slate-700 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <p class="font-extrabold text-slate-900">How to Add Working App Icon to Your Phone:</p>
+                <p><strong>1. On Android (Chrome):</strong> Open this app link in Chrome → Tap the <strong>3 dots (⋮)</strong> at top right → Tap <strong>"Add to Home screen"</strong> or <strong>"Install app"</strong>.</p>
+                <p><strong>2. On iPhone (Safari):</strong> Open in Safari → Tap the <strong>Share button (↑)</strong> → Tap <strong>"Add to Home Screen"</strong>.</p>
+                <p><strong>3. Fast Offline Mode:</strong> Once opened once, PrinsiVault opens instantly without waiting for slow internet.</p>
+            </div>
+
+            <div class="flex flex-wrap justify-between gap-2 pt-3 border-t border-slate-200">
+                <button type="button" onclick="downloadStandaloneHTMLFile()" class="px-4 py-2 text-xs font-bold rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-900 border border-cyan-200">Download Offline App (.html)</button>
+                <button type="button" onclick="closeModal('install-app-modal')" class="px-5 py-2 text-sm font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white">Got It</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Multi-Device Cloud Sync Modal (Phone & Laptop Access) -->
     <div id="sync-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
@@ -1052,15 +1103,82 @@
         let unsubscribeVault = null;
         let vaultRoomCode = localStorage.getItem(ROOM_STORAGE_KEY) || 'prinsi-chhatrola-vault';
         let isApplyingRemoteUpdate = false;
+        let deferredInstallPrompt = null;
 
-        // Initialize on page load
+        // Capture native browser PWA install prompt when supported
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredInstallPrompt = e;
+            const box = document.getElementById('native-install-box');
+            if (box) box.classList.remove('hidden');
+        });
+
+        function openInstallAppModal() {
+            openModal('install-app-modal');
+        }
+
+        async function triggerNativeInstall() {
+            if (!deferredInstallPrompt) {
+                showToast('Use your browser menu → "Add to Home Screen".');
+                return;
+            }
+            deferredInstallPrompt.prompt();
+            const { outcome } = await deferredInstallPrompt.userChoice;
+            deferredInstallPrompt = null;
+            if (outcome === 'accepted') {
+                closeModal('install-app-modal');
+                showToast('PrinsiVault installed on your Home Screen!');
+            }
+        }
+
+        // Download self-contained HTML file with user's data embedded so it opens instantaneously offline on any phone/laptop
+        function downloadStandaloneHTMLFile() {
+            try {
+                const cloneDoc = document.documentElement.cloneNode(true);
+                // Inject current data directly into starter fallback so offline copy opens with all records instantly
+                const dataScript = document.createElement('script');
+                dataScript.textContent = `window.__EMBEDDED_PRINSIVAULT_DATA__ = ${JSON.stringify(appData)};`;
+                cloneDoc.querySelector('head').appendChild(dataScript);
+
+                const htmlContent = '<!DOCTYPE html>\n' + cloneDoc.outerHTML;
+                const blob = new Blob([htmlContent], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'PrinsiVault_App.html';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast('Downloaded PrinsiVault_App.html — Open anytime even offline!');
+            } catch (err) {
+                showToast('Could not package offline HTML.', 'error');
+            }
+        }
+
+        // Initialize on page load (Lightweight & Non-blocking so phone never freezes)
         window.addEventListener('DOMContentLoaded', () => {
-            initAppBrandingIcons();
             loadLockState();
             loadFromStorage();
             populateResumeForm();
             renderAll();
             updateLockUI();
+
+            // Defer heavy canvas icon & manifest generation until after first paint to prevent phone lock/lag
+            const idleSetup = () => {
+                initAppBrandingIcons();
+                registerFastOfflineCache();
+            };
+            if ('requestIdleCallback' in window) {
+                requestIdleCallback(idleSetup, { timeout: 1200 });
+            } else {
+                setTimeout(idleSetup, 150);
+            }
+        });
+
+        window.addEventListener('firebase-sdk-ready', () => {
+            // Slight delay so UI stays 100% responsive on low-RAM phones
+            setTimeout(() => initCloudSync(), 300);
         });
 
         window.addEventListener('firebase-sdk-ready', () => {
@@ -1326,6 +1444,39 @@
         }
 
         // ==================== ICON & STORAGE HELPERS ====================
+        // Register lightweight Service Worker when hosted on HTTPS so app icon opens instantaneously offline
+        function registerFastOfflineCache() {
+            try {
+                if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+                    const swCode = `
+                        const CACHE_NAME = 'prinsivault-fast-v1';
+                        self.addEventListener('install', (e) => {
+                            self.skipWaiting();
+                            e.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(['./']).catch(() => {})));
+                        });
+                        self.addEventListener('activate', (e) => {
+                            e.waitUntil(self.clients.claim());
+                        });
+                        self.addEventListener('fetch', (e) => {
+                            if (e.request.method !== 'GET') return;
+                            e.respondWith(
+                                fetch(e.request)
+                                    .then((res) => {
+                                        const copy = res.clone();
+                                        caches.open(CACHE_NAME).then((c) => c.put(e.request, copy)).catch(() => {});
+                                        return res;
+                                    })
+                                    .catch(() => caches.match(e.request))
+                            );
+                        });
+                    `;
+                    const swBlob = new Blob([swCode], { type: 'application/javascript' });
+                    const swUrl = URL.createObjectURL(swBlob);
+                    navigator.serviceWorker.register(swUrl).catch(() => {});
+                }
+            } catch (e) {}
+        }
+
         // Dynamically Draw Square PrinsiVault App Icon on Offscreen Canvas & Inject Favicon + PWA Manifest
         function generatePrinsiVaultIconDataURL(size = 512) {
             const canvas = document.createElement('canvas');
@@ -1498,12 +1649,14 @@
                 if (faviconEl) faviconEl.href = icon192;
                 if (appleIconEl) appleIconEl.href = icon512;
 
-                // Dynamic Web App Manifest for Home Screen / PWA Installation
+                // Use valid absolute start_url & data-URI manifest so home-screen icon launches reliably without expiring blob URLs
+                const currentPageUrl = window.location.href.split('#')[0];
                 const manifestData = {
                     name: 'PrinsiVault — Personal Data & Record Manager',
                     short_name: 'PrinsiVault',
                     description: 'All-in-one personal workspace for Prinsi Chhatrola — Resume, Notes, Designs, and Works.',
-                    start_url: './',
+                    start_url: currentPageUrl,
+                    scope: './',
                     display: 'standalone',
                     background_color: '#f8fafc',
                     theme_color: '#1e1b4b',
@@ -1513,9 +1666,8 @@
                     ]
                 };
 
-                const manifestBlob = new Blob([JSON.stringify(manifestData)], { type: 'application/manifest+json' });
-                const manifestURL = URL.createObjectURL(manifestBlob);
-                if (manifestEl) manifestEl.href = manifestURL;
+                const manifestDataUri = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifestData));
+                if (manifestEl) manifestEl.href = manifestDataUri;
             } catch (err) {
                 console.error('Icon generation error:', err);
             }
@@ -1548,6 +1700,11 @@
         // Bulletproof LocalStorage Load
         function loadFromStorage() {
             try {
+                if (window.__EMBEDDED_PRINSIVAULT_DATA__ && !localStorage.getItem(STORAGE_KEY)) {
+                    appData = normalizeAppData(window.__EMBEDDED_PRINSIVAULT_DATA__);
+                    saveToStorage(true);
+                    return;
+                }
                 const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('prinsivault_data_v1');
                 if (raw) {
                     appData = normalizeAppData(JSON.parse(raw));
@@ -1560,7 +1717,8 @@
             }
         }
 
-        // Bulletproof LocalStorage Save + Automatic Cloud Sync
+        // Bulletproof LocalStorage Save + Debounced Cloud Sync (Prevents phone freezing on typing)
+        let cloudSyncDebounce = null;
         function saveToStorage(silent = false) {
             setSaveStatus('Saving...');
             appData.updatedAt = Date.now();
@@ -1568,7 +1726,10 @@
                 const serialized = JSON.stringify(appData);
                 localStorage.setItem(STORAGE_KEY, serialized);
                 updateStorageSizeLabel(serialized.length);
-                pushDataToCloud();
+                clearTimeout(cloudSyncDebounce);
+                cloudSyncDebounce = setTimeout(() => {
+                    pushDataToCloud();
+                }, 600);
                 clearTimeout(saveTimer);
                 saveTimer = setTimeout(() => {
                     setSaveStatus('No-Delete Protected');
